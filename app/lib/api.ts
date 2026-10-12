@@ -3,6 +3,7 @@ export type Account = {
   email: string;
   displayName: string;
   role: "employee" | "manager" | "admin";
+  jobRole: string;
   mustChangePassword: boolean;
   active: boolean;
 };

@@ -27,6 +27,18 @@ export async function routeOrganisationRequest(
   if (path === "/api/auth/me" && request.method === "GET") {
     return json({ account: publicAccount(store.accountForSession(tokenHash)) });
   }
+  if (path === "/api/manager/teams" && request.method === "GET") {
+    const actor = store.accountForSession(tokenHash);
+    if (actor.must_change_password || actor.role !== "manager")
+      throw new HttpError(403, "Manager access required");
+    const teams = store.storage.sql
+      .exec<{ id: string; name: string }>(
+        "SELECT t.id, t.name FROM teams t JOIN manager_assignments m ON m.team_id = t.id WHERE m.account_id = ? AND m.ends_at IS NULL ORDER BY t.name_key",
+        actor.id,
+      )
+      .toArray();
+    return json({ teams });
+  }
   if (path === "/api/employee/team" && request.method === "GET") {
     const actor = store.accountForSession(tokenHash);
     if (actor.must_change_password || actor.role !== "employee")

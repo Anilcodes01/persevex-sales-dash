@@ -14,6 +14,7 @@ export function publicAccount(account: Omit<Account, "password_hash">) {
     email: account.email,
     displayName: account.display_name,
     role: account.role,
+    jobRole: account.job_role,
     mustChangePassword: Boolean(account.must_change_password),
     active: Boolean(account.active),
   };

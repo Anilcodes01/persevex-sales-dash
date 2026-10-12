@@ -85,5 +85,5 @@ test('expired sessions, origin checks, oversized input and persistent throttling
   assert.ok(!hash.includes(password));
   const [, salt, derived] = hash.split('$');
   assert.equal(scryptSync(password, Buffer.from(salt, 'hex'), 32, { N: 16384, r: 8, p: 5, maxmem: 32 * 1024 * 1024 }).toString('hex'), derived);
-  assert.equal(f.object.health().schemaVersion, 3);
+  assert.equal(f.object.health().schemaVersion, 4);
 });

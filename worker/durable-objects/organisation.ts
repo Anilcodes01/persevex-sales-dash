@@ -26,8 +26,17 @@ export class Organisation extends DurableObject<Env> {
       );
       for (const statement of AUTH_SCHEMA) ctx.storage.sql.exec(statement);
       for (const statement of TEAM_SCHEMA) ctx.storage.sql.exec(statement);
+      const columns = ctx.storage.sql
+        .exec<{ name: string }>("PRAGMA table_info(accounts)")
+        .toArray();
+      if (!columns.some((column) => column.name === "job_role")) {
+        ctx.storage.sql.exec(
+          "ALTER TABLE accounts ADD COLUMN job_role TEXT NOT NULL DEFAULT 'employee'",
+        );
+        ctx.storage.sql.exec("UPDATE accounts SET job_role = role");
+      }
       ctx.storage.sql.exec(
-        "UPDATE app_metadata SET value = '3' WHERE key = 'schema_version' AND value IN ('1', '2')",
+        "UPDATE app_metadata SET value = '4' WHERE key = 'schema_version' AND value IN ('1', '2', '3')",
       );
     });
     this.authStore = new AuthStore(ctx.storage);

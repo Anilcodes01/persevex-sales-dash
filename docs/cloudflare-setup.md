@@ -30,7 +30,7 @@ This address is not live until deployment.
 ## Verification after starting the runtime
 
 `GET /api/health` checks the Durable Object's persistent schema metadata and
-returns `status: ok`, `storage: sqlite`, and `schemaVersion: 3`. Storage failures
+returns `status: ok`, `storage: sqlite`, and `schemaVersion: 4`. Storage failures
 return HTTP 503. Unknown API paths return HTTP 404.
 
 Application-managed password authentication is implemented; see

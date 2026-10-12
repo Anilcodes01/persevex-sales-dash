@@ -55,7 +55,7 @@ For the configured name and your account subdomain, it should be:
 `https://persevex-sales-dash.aceospec.workers.dev`
 
 Open the URL and `/api/health`. The health endpoint should show `status: ok`,
-`storage: sqlite`, and `schemaVersion: 3`.
+`storage: sqlite`, and `schemaVersion: 4`.
 
 ## 5. Set up a production administrator
 

@@ -7,6 +7,7 @@ import {
   validPassword,
 } from "../security/credentials";
 import { queryAccounts } from "../storage/accounts-store";
+import { isJobRole } from "../../shared/roles";
 
 export function listAccounts(url: URL, store: AuthStore): Response {
   const result = queryAccounts(url, store);
@@ -27,12 +28,20 @@ export function updateAccount(
   const email = normaliseEmail(body.email);
   const name =
     typeof body.displayName === "string" ? body.displayName.trim() : "";
+  const current =
+    typeof body.accountId === "string"
+      ? store.storage.sql
+          .exec<Account>("SELECT * FROM accounts WHERE id = ?", body.accountId)
+          .toArray()[0]
+      : undefined;
+  const jobRole = body.jobRole ?? current?.job_role ?? body.role;
   if (
     typeof body.accountId !== "string" ||
     !email ||
     !name ||
     name.length > 100 ||
-    !["employee", "manager", "admin"].includes(body.role as string)
+    !["employee", "manager", "admin"].includes(body.role as string) ||
+    !isJobRole(jobRole)
   ) {
     throw new HttpError(400, "Provide a valid name, email and role");
   }
@@ -68,10 +77,11 @@ export function updateAccount(
         body.accountId as string,
       );
     store.storage.sql.exec(
-      "UPDATE accounts SET email = ?, display_name = ?, role = ? WHERE id = ?",
+      "UPDATE accounts SET email = ?, display_name = ?, role = ?, job_role = ? WHERE id = ?",
       email,
       name,
       body.role as string,
+      jobRole as string,
       body.accountId as string,
     );
     store.audit(actor.id, "account_updated", body.accountId as string);
@@ -111,12 +121,14 @@ export function createAccount(
   const name =
     typeof body.displayName === "string" ? body.displayName.trim() : "";
   const role = actor ? body.role : "admin";
+  const jobRole = actor ? (body.jobRole ?? role) : "admin";
   if (
     !email ||
     !name ||
     name.length > 100 ||
     !validPassword(body.password) ||
-    !["employee", "manager", "admin"].includes(role as string)
+    !["employee", "manager", "admin"].includes(role as string) ||
+    !isJobRole(jobRole)
   )
     throw new HttpError(
       400,
@@ -133,13 +145,14 @@ export function createAccount(
     email,
     display_name: name,
     role: role as string,
+    job_role: jobRole as string,
     password_hash: hashPassword(body.password),
     active: 1,
     must_change_password: actor ? 1 : 0,
   };
   store.storage.transactionSync(() => {
     store.storage.sql.exec(
-      "INSERT INTO accounts VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO accounts (id, email, display_name, password_hash, role, active, must_change_password, created_at, job_role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
       account.id,
       email,
       name,
@@ -148,6 +161,7 @@ export function createAccount(
       1,
       account.must_change_password,
       Date.now(),
+      account.job_role,
     );
     store.audit(actor || account.id, "account_created", account.id);
   });

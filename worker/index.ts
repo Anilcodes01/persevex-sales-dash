@@ -1,5 +1,6 @@
 import type { Env } from "./types";
 import { json } from "./http/helpers";
+import { isAllowedRequestOrigin } from "./security/request-origin";
 
 // Cloudflare requires the Durable Object class to be exported from this entrypoint.
 export { Organisation } from "./durable-objects/organisation";
@@ -10,13 +11,14 @@ export default {
     if (
       url.pathname.startsWith("/api/auth/") ||
       url.pathname.startsWith("/api/admin/") ||
-      url.pathname.startsWith("/api/employee/")
+      url.pathname.startsWith("/api/employee/") ||
+      url.pathname.startsWith("/api/manager/")
     ) {
       if (request.method !== "GET" && request.method !== "POST")
         return json({ error: "Method not allowed" }, 405);
       if (
         request.method === "POST" &&
-        request.headers.get("Origin") !== url.origin
+        !isAllowedRequestOrigin(request, env)
       )
         return json({ error: "Invalid request origin" }, 403);
       return env.ORGANISATION.getByName("persevex").fetch(request);

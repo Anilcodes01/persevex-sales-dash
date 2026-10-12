@@ -1,10 +1,12 @@
 import { AuthStore } from "./auth-store";
 import type { Account } from "../types";
+import { isJobRole } from "../../shared/roles";
 
 export function queryAccounts(url: URL, store: AuthStore) {
   const query = (url.searchParams.get("q") || "").trim().slice(0, 100);
   const status = url.searchParams.get("status") || "all";
   const role = url.searchParams.get("role") || "all";
+  const jobRole = url.searchParams.get("jobRole") || "all";
   const requestedPage = Number(url.searchParams.get("page") || 1);
   const page =
     Number.isSafeInteger(requestedPage) && requestedPage > 0
@@ -27,6 +29,10 @@ export function queryAccounts(url: URL, store: AuthStore) {
     where.push("role = ?");
     args.push(role);
   }
+  if (isJobRole(jobRole)) {
+    where.push("job_role = ?");
+    args.push(jobRole);
+  }
   const filter = where.length ? ` WHERE ${where.join(" AND ")}` : "";
   const total = store.storage.sql
     .exec<{ count: number }>(
@@ -36,7 +42,7 @@ export function queryAccounts(url: URL, store: AuthStore) {
     .one().count;
   const accounts = store.storage.sql
     .exec<Omit<Account, "password_hash"> & { created_at: number }>(
-      `SELECT id, email, display_name, role, active, must_change_password, created_at FROM accounts${filter}
+      `SELECT id, email, display_name, role, job_role, active, must_change_password, created_at FROM accounts${filter}
      ORDER BY created_at DESC, id ASC LIMIT ? OFFSET ?`,
       ...args,
       pageSize,

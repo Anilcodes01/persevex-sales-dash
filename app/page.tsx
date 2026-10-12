@@ -1,17 +1,22 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { Brand } from "./components/layout/brand";
 import { useRouter } from "next/navigation";
 
+import { jobRoleLabel, accessLabel } from "../shared/roles";
 import { Account, ApiError, api } from "./lib/api";
 import AdminDashboard from "./components/admin-dashboard";
 const input =
-  "mt-2 w-full rounded-lg border border-zinc-300 bg-white px-3 py-3 text-zinc-950 focus:outline-2 focus:outline-orange-600";
+  "mt-2 w-full border border-zinc-300 bg-white px-3 py-3 text-zinc-950 focus:outline-2 focus:outline-orange-600";
 const primary =
-  "w-full rounded-lg bg-orange-600 px-4 py-3 font-medium text-white disabled:opacity-50";
+  "w-full bg-orange-600 px-4 py-3 font-medium text-white disabled:opacity-50";
 const secondary =
-  "rounded-lg border border-zinc-300 px-4 py-3 text-sm disabled:opacity-50";
+  "border border-zinc-300 px-4 py-3 text-sm disabled:opacity-50";
 
 export default function Home() {
   const router = useRouter();
@@ -41,7 +46,7 @@ export default function Home() {
     };
   }, []);
   useEffect(() => {
-    if (account?.role === "employee" && !passwordMode)
+    if (account && account.role !== "admin" && !passwordMode)
       router.replace("/employee");
   }, [account, passwordMode, router]);
   const sessionExpired = useCallback(() => {
@@ -102,7 +107,7 @@ export default function Home() {
       setBusy(false);
     }
   }
-  if (account?.role === "employee" && !passwordMode) {
+  if (account && account.role !== "admin" && !passwordMode) {
     return (
       <main className="session-screen">
         <p role="status">Opening your workspace…</p>
@@ -131,21 +136,15 @@ export default function Home() {
   return (
     <main className="auth-layout">
       <aside className="auth-story">
-        <Link className="brand" href="/">
-          <span className="brand-mark">P</span>persevex
-          <span className="brand-dot">.</span>
-        </Link>
+        <Brand />
         <div>
-          <p className="eyebrow">THE NEXT WIN STARTS HERE</p>
+          <p className="eyebrow">PERSEVEX</p>
           <h2>
-            Great teams.
+            One workspace.
             <br />
-            Greater possibilities.
+            Your team.
           </h2>
-          <p>
-            A shared workspace for your people, performance, and every sale
-            along the way.
-          </p>
+          <p>Manage your people and follow your team’s performance.</p>
         </div>
         <span className="story-footer">PERSEVEX · SALES WORKSPACE</span>
       </aside>
@@ -177,7 +176,8 @@ export default function Home() {
             </p>
             {account && (
               <p className="mt-4 text-sm">
-                {account.email} · {account.role}
+                {account.email} · {jobRoleLabel(account.jobRole)} ·{" "}
+                {accessLabel(account.role)}
               </p>
             )}
             {(!account || passwordMode) && (
@@ -187,9 +187,9 @@ export default function Home() {
                 className="mt-6 space-y-5"
               >
                 {!account && (
-                  <label className="block text-sm font-medium">
+                  <Label className="block text-sm font-medium">
                     Email
-                    <input
+                    <Input
                       className={input}
                       name="email"
                       type="email"
@@ -197,11 +197,11 @@ export default function Home() {
                       maxLength={254}
                       required
                     />
-                  </label>
+                  </Label>
                 )}
-                <label className="block text-sm font-medium">
+                <Label className="block text-sm font-medium">
                   {passwordMode ? "Current password" : "Password"}
-                  <input
+                  <Input
                     className={input}
                     name={passwordMode ? "currentPassword" : "password"}
                     type="password"
@@ -209,12 +209,12 @@ export default function Home() {
                     maxLength={128}
                     required
                   />
-                </label>
+                </Label>
                 {passwordMode && (
                   <>
-                    <label className="block text-sm font-medium">
+                    <Label className="block text-sm font-medium">
                       New password
-                      <input
+                      <Input
                         className={input}
                         name="newPassword"
                         type="password"
@@ -226,10 +226,10 @@ export default function Home() {
                       <span className="mt-2 block text-xs text-zinc-500">
                         Use 15–128 characters. A long passphrase works well.
                       </span>
-                    </label>
-                    <label className="block text-sm font-medium">
+                    </Label>
+                    <Label className="block text-sm font-medium">
                       Confirm new password
-                      <input
+                      <Input
                         className={input}
                         name="confirmPassword"
                         type="password"
@@ -238,22 +238,22 @@ export default function Home() {
                         maxLength={128}
                         required
                       />
-                    </label>
+                    </Label>
                   </>
                 )}
-                <button disabled={busy} className={primary}>
+                <Button disabled={busy} className={primary}>
                   {busy
                     ? "Please wait…"
                     : passwordMode
                       ? "Save new password"
                       : "Sign in"}
-                </button>
+                </Button>
               </form>
             )}
             {account && (
               <div className="mt-5 flex flex-wrap gap-3">
                 {!account.mustChangePassword && (
-                  <button
+                  <Button
                     className={secondary}
                     disabled={busy}
                     onClick={() => {
@@ -262,11 +262,11 @@ export default function Home() {
                     }}
                   >
                     {passwordMode ? "Cancel" : "Change password"}
-                  </button>
+                  </Button>
                 )}
-                <button onClick={logout} disabled={busy} className={secondary}>
+                <Button onClick={logout} disabled={busy} className={secondary}>
                   Sign out
-                </button>
+                </Button>
               </div>
             )}
           </>

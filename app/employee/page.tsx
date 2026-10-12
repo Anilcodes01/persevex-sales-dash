@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -14,7 +16,7 @@ export default function EmployeePage() {
   const loadSession = useCallback(() => {
     return api<{ account: Account }>("/api/auth/me")
       .then(({ account }) => {
-        if (account.role !== "employee" || account.mustChangePassword) {
+        if (account.role === "admin" || account.mustChangePassword) {
           router.replace("/");
           return;
         }
@@ -68,9 +70,9 @@ export default function EmployeePage() {
           <h1>{error ? "Unable to connect" : "Opening your workspace"}</h1>
           <p role="status">{error || "Checking your session…"}</p>
           {error && (
-            <button className="button primary" onClick={loadSession}>
+            <Button className="button primary" onClick={loadSession}>
               Try again
-            </button>
+            </Button>
           )}
           <Link className="session-home-link" href="/">
             Back to sign in

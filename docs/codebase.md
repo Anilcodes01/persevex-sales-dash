@@ -1,4 +1,4 @@
-# Backend code guide
+# Codebase guide
 
 All API URLs remain under `/api/`. Modules are separated by responsibility;
 they are deployed together as one Worker and one Durable Object class.
@@ -34,17 +34,63 @@ worker/
 ## Frontend workspaces
 
 `app/page.tsx` handles sign-in, first-login password changes and the admin
-workspace. Employees with an established password are routed to `/employee`.
+workspace. Employees and managers with an established password are routed to `/employee`.
 `app/employee/page.tsx` rechecks the session before rendering; unsigned users,
-other roles and accounts requiring a password change return to `/`.
+administrators and accounts requiring a password change return to `/`.
 
-`app/components/employee-dashboard.tsx` contains the employee overview and
-account settings. Password changes revoke sessions; sign-out uses the backend.
+`app/components/employee-dashboard.tsx` composes the employee overview and
+account settings from `app/components/employee/`. Password changes revoke
+sessions; sign-out uses the backend.
 Performance cards show unavailable values until sales/target APIs are built.
 They do not represent recorded sales or fabricated performance.
 
-`app/components/admin-dashboard.tsx` contains the admin People directory.
+`app/components/admin-dashboard.tsx` selects the People or Teams view and
+composes the shared workspace layout. The People directory lives in
+`app/components/admin/` and its API/state logic in `app/hooks/use-people-directory.ts`.
 `app/lib/api.ts` holds frontend account types and same-origin API requests.
+
+```text
+app/
+  components/
+    layout/
+      brand.tsx                  Shared logo link
+      workspace-sidebar.tsx      Navigation, account identity and session actions
+      workspace-navbar.tsx       Breadcrumb and workspace badge
+      workspace-shell.tsx        Layout composition only
+      page-heading.tsx           Page title and action slot
+      workspace-footer.tsx       Shared footer
+      workspace-dialog.tsx       Accessible dialog and save/dismissal guards
+    admin/
+      people-panel.tsx           People view composition and pagination
+      people-stats.tsx           Account summary statistics
+      people-filters.tsx         Search and access/job-role/status filters
+      people-table.tsx           Directory rows and account action buttons
+      account-dialog.tsx         Create/edit/reset/disable/reactivate forms
+      types.ts                   Directory types and action titles
+    employee/
+      employee-overview.tsx      Overview, profile summary and performance placeholders
+      account-settings.tsx       Profile and password change
+      types.ts                   Workspace props
+    admin-dashboard.tsx          Admin view selection and wiring
+    employee-dashboard.tsx       Employee view selection and session actions
+    teams-panel.tsx              Team management
+  hooks/
+    use-people-directory.ts      Directory fetching, filtering and account mutations
+  lib/
+    api.ts                       API client and account types
+    display.ts                   Shared name initials
+```
+
+Keep layout components responsible for presentation and callbacks. Feature
+components own their forms and domain UI, while hooks handle asynchronous state
+and API operations. New workspace pages should reuse the shell, sidebar and
+navbar instead of duplicating them. The refactor changes no API or database schema.
+
+Shared job-role labels and validators live in `shared/roles.ts`. Authentication
+permissions still use Employee/Manager/Administrator access, separate from job
+titles. `components/ui/` contains the shadcn primitives; `lib/utils.ts` supplies
+their class utility. Theme/layout styles live in `app/globals.css` and
+`app/workspace.css`. See `docs/roles-and-ui.md` for migration and review notes.
 
 `app/components/teams-panel.tsx` implements team management under the admin
 Teams tab. Its APIs live in `worker/routes/teams.ts`, with queries in

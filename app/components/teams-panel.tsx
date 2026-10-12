@@ -1,4 +1,11 @@
 "use client";
+import { PageHeading } from "./layout/page-heading";
+import { WorkspaceFooter } from "./layout/workspace-footer";
+import { Badge } from "@/components/ui/badge";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { ApiError, api } from "../lib/api";
 type Person = { id: string; displayName: string; email: string; role: string };
@@ -98,25 +105,23 @@ export default function TeamsPanel({
     data?.people.filter((person) => person.role === "manager") || [];
   return (
     <>
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">STRONGER TOGETHER</p>
-          <h1>Organise your teams.</h1>
-          <p className="page-subtitle">
-            Assign employees and give each team a manager.
-          </p>
-        </div>
-        <button
-          className="button primary"
-          disabled={busy}
-          onClick={() => setCreating(!creating)}
-        >
-          {creating ? "Cancel" : "＋ Create team"}
-        </button>
-      </div>
+      <PageHeading
+        eyebrow="STRONGER TOGETHER"
+        title="Organise your teams."
+        description="Assign employees and give each team a manager."
+        action={
+          <Button
+            className="button primary"
+            disabled={busy}
+            onClick={() => setCreating(!creating)}
+          >
+            {creating ? "Cancel" : "＋ Create team"}
+          </Button>
+        }
+      />
       {error && (
         <p className="notice error" role="alert">
-          {error} <button onClick={load}>Retry</button>
+          {error} <Button onClick={load}>Retry</Button>
         </p>
       )}
       {notice && (
@@ -133,16 +138,16 @@ export default function TeamsPanel({
             onSubmit={(event) => save(event)}
             className="account-form team-inline-form"
           >
-            <label>
+            <Label>
               Team name
-              <input
+              <Input
                 name="name"
                 required
                 maxLength={80}
                 placeholder="e.g. Sales North"
               />
-            </label>
-            <label>
+            </Label>
+            <Label>
               Manager
               <select name="managerId" defaultValue="">
                 <option value="">Assign later</option>
@@ -152,10 +157,10 @@ export default function TeamsPanel({
                   </option>
                 ))}
               </select>
-            </label>
-            <button className="button primary" disabled={busy}>
+            </Label>
+            <Button className="button primary" disabled={busy}>
               {busy ? "Saving…" : "Create team"}
-            </button>
+            </Button>
           </form>
         </section>
       )}
@@ -175,12 +180,12 @@ export default function TeamsPanel({
             <div className="panel-title">
               <h2>
                 Teams{" "}
-                <span className="feature-status">{data.teams.length}</span>
+                <Badge className="feature-status">{data.teams.length}</Badge>
               </h2>
             </div>
             <nav aria-label="Team selection">
               {data.teams.map((item) => (
-                <button
+                <Button
                   key={item.id}
                   disabled={busy}
                   className={`team-select ${item.id === team.id ? "selected" : ""}`}
@@ -194,7 +199,7 @@ export default function TeamsPanel({
                     {item.manager?.displayName || "No manager"}
                     {item.manager && !item.manager.active ? " (inactive)" : ""}
                   </span>
-                </button>
+                </Button>
               ))}
             </nav>
           </section>
@@ -213,16 +218,16 @@ export default function TeamsPanel({
                 onSubmit={(event) => save(event, team.id)}
                 className="account-form team-inline-form"
               >
-                <label>
+                <Label>
                   Team name
-                  <input
+                  <Input
                     name="name"
                     defaultValue={team.name}
                     required
                     maxLength={80}
                   />
-                </label>
-                <label>
+                </Label>
+                <Label>
                   Manager
                   <select
                     name="managerId"
@@ -240,10 +245,10 @@ export default function TeamsPanel({
                       </option>
                     ))}
                   </select>
-                </label>
-                <button className="button primary" disabled={busy}>
+                </Label>
+                <Button className="button primary" disabled={busy}>
                   {busy ? "Saving…" : "Save team"}
-                </button>
+                </Button>
               </form>
             </section>
             <section className="roster-panel team-members-panel">
@@ -257,7 +262,7 @@ export default function TeamsPanel({
                 onSubmit={assign}
                 className="account-form team-assignment-form"
               >
-                <label>
+                <Label>
                   Assign an employee
                   <select name="accountId" required defaultValue="">
                     <option value="" disabled>
@@ -281,10 +286,10 @@ export default function TeamsPanel({
                     Assigning someone from another team transfers them. Their
                     history is retained.
                   </span>
-                </label>
-                <button className="button primary" disabled={busy}>
+                </Label>
+                <Button className="button primary" disabled={busy}>
                   Assign employee
-                </button>
+                </Button>
               </form>
               <div className="team-members">
                 {team.members.map((member) => (
@@ -296,7 +301,7 @@ export default function TeamsPanel({
                         {!member.active ? " · Inactive account" : ""}
                       </span>
                     </div>
-                    <button
+                    <Button
                       className="button ghost"
                       disabled={busy}
                       onClick={() =>
@@ -308,7 +313,7 @@ export default function TeamsPanel({
                       }
                     >
                       Remove
-                    </button>
+                    </Button>
                   </div>
                 ))}
                 {!team.members.length && (
@@ -321,10 +326,7 @@ export default function TeamsPanel({
           </div>
         </div>
       )}
-      <p className="workspace-footer">
-        PERSEVEX SALES WORKSPACE
-        <span>Team assignments are managed by administrators.</span>
-      </p>
+      <WorkspaceFooter description="Team assignments are managed by administrators." />
     </>
   );
 }

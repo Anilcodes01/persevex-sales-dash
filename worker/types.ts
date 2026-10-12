@@ -4,6 +4,8 @@ export interface Env {
   ASSETS: Fetcher;
   ORGANISATION: DurableObjectNamespace<Organisation>;
   BOOTSTRAP_ADMIN_SECRET?: string;
+  LOCAL_DEVELOPMENT?: string;
+  DEV_FRONTEND_ORIGIN?: string;
 }
 
 export type Account = {
@@ -12,6 +14,7 @@ export type Account = {
   display_name: string;
   password_hash: string;
   role: string;
+  job_role: string;
   active: number;
   must_change_password: number;
 };
