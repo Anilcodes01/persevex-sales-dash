@@ -1,4 +1,6 @@
 "use client";
+import { COLOR_THEMES } from "../../../shared/color-themes";
+import { useColorTheme } from "../color-theme-provider";
 import { useTheme } from "next-themes";
 import {
   ChevronDown,
@@ -21,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Account } from "../../lib/api";
 import { initials } from "../../lib/display";
+import type { WorkspaceSidebarProps } from "./workspace-sidebar";
 export type AccountMenuProps = {
   account: Account;
   accountLabel: string;
@@ -28,6 +31,7 @@ export type AccountMenuProps = {
   onSettings: () => void;
   onLogout: () => void;
   signingOut?: boolean;
+  mobileNavigation?: WorkspaceSidebarProps;
 };
 export function AccountMenu({
   account,
@@ -36,8 +40,10 @@ export function AccountMenu({
   onSettings,
   onLogout,
   signingOut = false,
+  mobileNavigation,
 }: AccountMenuProps) {
   const { theme, setTheme } = useTheme();
+  const { colorTheme, setColorTheme } = useColorTheme();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -58,6 +64,19 @@ export function AccountMenu({
           <small>{accountLabel}</small>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {mobileNavigation && (
+          <div className="mobile-account-navigation">
+            <DropdownMenuLabel>{mobileNavigation.navigationLabel}</DropdownMenuLabel>
+            {mobileNavigation.items.map(item => (
+              <DropdownMenuItem key={item.id} onSelect={() => mobileNavigation.onNavigate(item.id)} aria-current={mobileNavigation.activeItem === item.id ? "page" : undefined}>
+                {typeof item.icon === "string" ? <span aria-hidden="true">{item.icon}</span> : <item.icon />}
+                {item.label}
+                {item.count !== undefined && <span className="ml-auto">{item.count}</span>}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+          </div>
+        )}
         <DropdownMenuItem onSelect={onSettings}>
           <Settings />
           {settingsLabel}
@@ -67,6 +86,8 @@ export function AccountMenu({
         <DropdownMenuRadioGroup
           value={theme || "light"}
           onValueChange={setTheme}
+          className="appearance-options"
+          aria-label="Appearance"
         >
           <DropdownMenuRadioItem value="light">
             <Sun />
@@ -80,6 +101,31 @@ export function AccountMenu({
             <Monitor />
             System
           </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Theme colour</DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={colorTheme}
+          onValueChange={setColorTheme}
+          className="theme-colour-options"
+          aria-label="Theme colour"
+        >
+          {COLOR_THEMES.map((colour) => (
+            <DropdownMenuRadioItem
+              key={colour.value}
+              value={colour.value}
+              className="theme-colour-option"
+              aria-label={colour.label}
+              title={colour.label}
+            >
+              <span
+                className="theme-colour-swatch"
+                style={{ backgroundColor: colour.swatch }}
+                aria-hidden="true"
+              />
+              <span className="sr-only">{colour.label}</span>
+            </DropdownMenuRadioItem>
+          ))}
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={signingOut} onSelect={onLogout}>

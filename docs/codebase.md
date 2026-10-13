@@ -39,8 +39,8 @@ workspace. Employees and managers with an established password are routed to `/e
 administrators and accounts requiring a password change return to `/`.
 
 `app/components/employee-dashboard.tsx` composes the employee overview and
-account settings from `app/components/employee/`. Password changes revoke
-sessions; sign-out uses the backend.
+account details from `app/components/employee/`. Employee and Team Lead
+account pages show profile details only; sign-out uses the backend.
 Performance cards show unavailable values until sales/target APIs are built.
 They do not represent recorded sales or fabricated performance.
 
@@ -73,7 +73,7 @@ app/
       types.ts                   Directory types and action titles
     employee/
       employee-overview.tsx      Overview, profile summary and performance placeholders
-      account-settings.tsx       Profile and password change
+      account-settings.tsx       Profile details
       types.ts                   Workspace props
     admin-dashboard.tsx          Admin view selection and wiring
     employee-dashboard.tsx       Employee view selection and session actions
@@ -118,3 +118,17 @@ organisation router before calling protected handlers.
 The navbar spans the workspace above the navigation sidebar. Account settings
 and sign-out live in its shadcn dropdown menu. Appearance is managed by
 `next-themes`; forms and filters use the shared shadcn Select adapter.
+
+Date-range targets live in `worker/routes/targets.ts` and `worker/storage/targets-store.ts`; date validation and migration live in `worker/storage/target-periods.ts`.
+The target screens and personal performance cards live in `app/components/targets/`.
+Registration/overall definitions and schema compatibility are described in `docs/targets.md`.
+
+Navbar theme colours are defined in `shared/color-themes.ts` and `app/color-themes.css`.
+`app/components/color-theme-provider.tsx` persists the browser preference and syncs tabs;
+light/dark/system remains controlled separately by next-themes. The layout applies the
+saved palette before first paint. Buttons, navigation, focus states and tinted surfaces
+use shared CSS tokens instead of hardcoded orange values.
+
+`app/components/sales/create-sale-dialog.tsx` owns the universal employee/Team Lead
+Create sale modal. The navbar exposes a presentation-only action slot. My sales
+uses the list-only SalesPanel; the form and draft state stay in SaleForm.

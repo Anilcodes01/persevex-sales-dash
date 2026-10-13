@@ -1,5 +1,6 @@
 "use client";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { ColorThemeProvider } from "./color-theme-provider";
 import type { ReactNode } from "react";
 export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
@@ -9,7 +10,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      {children}
+      <ColorThemeProvider>{children}</ColorThemeProvider>
     </NextThemesProvider>
   );
 }

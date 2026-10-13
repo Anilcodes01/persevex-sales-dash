@@ -78,7 +78,7 @@ export function AccountDialog({ directory }: { directory: PeopleDirectory }) {
         {(selection.action === "create" || selection.action === "reset") && (
           <>
             <Label>
-              Temporary password
+              {selection.action === "create" ? "Password" : "Temporary password"}
               <Input
                 name="password"
                 type="password"
@@ -88,7 +88,9 @@ export function AccountDialog({ directory }: { directory: PeopleDirectory }) {
                 required
               />
               <span className="field-help">
-                6–128 characters. They must change it at first sign-in.
+                {selection.action === "create"
+                  ? "6–128 characters. They can sign in directly to their dashboard."
+                  : "6–128 characters. They must change it at next sign-in."}
               </span>
             </Label>
             {selection.action === "reset" && (

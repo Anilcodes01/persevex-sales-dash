@@ -113,7 +113,6 @@ export default function TeamsPanel({
   return (
     <>
       <PageHeading
-        eyebrow="STRONGER TOGETHER"
         title="Organise your teams."
         description="Assign employees and give each team a team lead."
         action={

@@ -14,11 +14,10 @@ import { jobRoleLabel, accessLabel } from "../shared/roles";
 import { Account, ApiError, api } from "./lib/api";
 import AdminDashboard from "./components/admin-dashboard";
 const input =
-  "mt-2 w-full border border-zinc-300 bg-white px-3 py-3 text-zinc-950 focus:outline-2 focus:outline-orange-600";
+  "mt-2 w-full border border-input bg-background px-3 py-3 text-foreground focus:outline-2 focus:outline-ring";
 const primary =
-  "w-full bg-orange-600 px-4 py-3 font-medium text-white disabled:opacity-50";
-const secondary =
-  "border border-zinc-300 px-4 py-3 text-sm disabled:opacity-50";
+  "w-full bg-primary px-4 py-3 font-medium text-primary-foreground disabled:opacity-50";
+const secondary = "border border-input px-4 py-3 text-sm disabled:opacity-50";
 
 export default function Home() {
   const router = useRouter();
@@ -167,7 +166,7 @@ export default function Home() {
           </p>
         ) : (
           <>
-            <p className="mt-3 text-sm text-zinc-600">
+            <p className="mt-3 text-sm text-muted-foreground">
               {account
                 ? account.mustChangePassword
                   ? "Choose your own password before continuing."
@@ -225,7 +224,7 @@ export default function Home() {
                         maxLength={128}
                         required
                       />
-                      <span className="mt-2 block text-xs text-zinc-500">
+                      <span className="mt-2 block text-xs text-muted-foreground">
                         Use 6–128 characters. A long passphrase works well.
                       </span>
                     </Label>

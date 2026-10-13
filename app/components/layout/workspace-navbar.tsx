@@ -1,23 +1,26 @@
 import { Brand } from "./brand";
+import type { ReactNode } from "react";
 import { AccountMenu, type AccountMenuProps } from "./account-menu";
 export type WorkspaceNavbarProps = AccountMenuProps & {
   homeHref: string;
   homeLabel: string;
-  page: string;
+  action?: ReactNode;
 };
 export function WorkspaceNavbar({
   homeHref,
   homeLabel,
-  page,
+  action,
   ...accountProps
 }: WorkspaceNavbarProps) {
   return (
     <header className="workspace-header">
       <div className="navbar-left">
         <Brand href={homeHref} label={homeLabel} />
-        <span className="navbar-page">{page}</span>
       </div>
-      <AccountMenu {...accountProps} />
+      <div className="navbar-actions">
+        {action}
+        <AccountMenu {...accountProps} />
+      </div>
     </header>
   );
 }

@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import type { ReactNode, ReactElement } from "react";
+import type { WorkspaceSidebarProps } from "./workspace-sidebar";
 import { WorkspaceNavbar, type WorkspaceNavbarProps } from "./workspace-navbar";
 export function WorkspaceShell({
   sidebar,
@@ -6,14 +7,14 @@ export function WorkspaceShell({
   className = "",
   children,
 }: {
-  sidebar: ReactNode;
+  sidebar: ReactElement<WorkspaceSidebarProps>;
   navbar: WorkspaceNavbarProps;
   className?: string;
   children: ReactNode;
 }) {
   return (
     <div className={`admin-shell ${className}`.trim()}>
-      <WorkspaceNavbar {...navbar} />
+      <WorkspaceNavbar {...navbar} mobileNavigation={sidebar.props} />
       <div className="workspace-body">
         {sidebar}
         <main className="admin-main">

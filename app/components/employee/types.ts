@@ -4,5 +4,4 @@ export type EmployeeDashboardProps = {
   statusMessage: string;
   onSessionExpired: () => void;
   onSignedOut: () => void;
-  onPasswordChanged: () => void;
 };

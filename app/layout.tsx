@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/sonner";
+import { COLOR_THEME_INIT } from "../shared/color-themes";
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "./components/theme-provider";
@@ -11,6 +12,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" suppressHydrationWarning className="h-full antialiased">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: COLOR_THEME_INIT }} />
+      </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
           {children}

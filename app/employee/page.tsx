@@ -1,7 +1,6 @@
 "use client";
 import { useNotificationState } from "../hooks/use-notification-state";
 
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 import { useCallback, useEffect, useState } from "react";
@@ -14,7 +13,6 @@ export default function EmployeePage() {
   const router = useRouter();
   const [account, setAccount] = useState<Account | null>(null);
   const [error, setError] = useNotificationState();
-  const [passwordChanged, setPasswordChanged] = useState(false);
   const loadSession = useCallback(() => {
     return api<{ account: Account }>("/api/auth/me")
       .then(({ account }) => {
@@ -40,30 +38,14 @@ export default function EmployeePage() {
     void loadSession();
   }, [loadSession]);
   useEffect(() => {
-    if (!account || passwordChanged) return;
+    if (!account) return;
     const refresh = () => {
       void loadSession();
     };
     window.addEventListener("focus", refresh);
     return () => window.removeEventListener("focus", refresh);
-  }, [account, passwordChanged, loadSession]);
+  }, [account, loadSession]);
 
-  if (passwordChanged)
-    return (
-      <main className="session-screen">
-        <section>
-          <span className="brand-mark">P</span>
-          <h1>Password updated</h1>
-          <p>
-            You have been signed out on all devices. Sign in with your new
-            password to continue.
-          </p>
-          <Link className="button primary" href="/">
-            Back to sign in
-          </Link>
-        </section>
-      </main>
-    );
   if (!account)
     return (
       <main className="session-screen">
@@ -97,11 +79,6 @@ export default function EmployeePage() {
       onSignedOut={() => {
         setAccount(null);
         router.replace("/");
-      }}
-      onPasswordChanged={() => {
-        setAccount(null);
-        setPasswordChanged(true);
-        toast.success("Password updated. Sign in with your new password.");
       }}
     />
   );

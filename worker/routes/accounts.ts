@@ -70,7 +70,7 @@ export function updateAccount(
         Date.now(),
         body.accountId as string,
       );
-    if (body.role !== "manager")
+    if (body.role !== "manager" && jobRole !== "team_lead")
       store.storage.sql.exec(
         "UPDATE manager_assignments SET ends_at = ? WHERE account_id = ? AND ends_at IS NULL",
         Date.now(),
@@ -148,7 +148,7 @@ export function createAccount(
     job_role: jobRole as string,
     password_hash: hashPassword(body.password),
     active: 1,
-    must_change_password: actor ? 1 : 0,
+    must_change_password: 0,
   };
   store.storage.transactionSync(() => {
     store.storage.sql.exec(

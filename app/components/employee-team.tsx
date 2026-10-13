@@ -35,31 +35,6 @@ export default function EmployeeTeam({
     void load();
   }, [load]);
   return (
-    <section
-      className="roster-panel employee-team-summary"
-      aria-labelledby="my-team-heading"
-    >
-      <div>
-        <p className="eyebrow">{manager ? "MY TEAMS" : "MY TEAM"}</p>
-        <h2 id="my-team-heading">
-          {result
-            ? manager
-              ? result.teams?.map((team) => team.name).join(", ") ||
-                "No teams assigned yet"
-              : result.team?.name || "No team assigned yet"
-            : "Loading your team…"}
-        </h2>
-        <p>
-          {manager
-            ? "Teams you oversee. Your administrator manages these assignments."
-            : result?.team
-              ? `Team Lead: ${result.team.managerName || "No active team lead assigned"}`
-              : result
-                ? "Your administrator can assign you to a team."
-                : "Your team details will appear here."}
-        </p>
-      </div>
-      {error && <Button onClick={load}>Retry</Button>}
-    </section>
+   <div></div>
   );
 }

@@ -50,8 +50,10 @@ There is no public registration endpoint.
 | `/api/admin/accounts/disable`        | POST   | accountId; disables account and revokes sessions                              |
 | `/api/admin/accounts/reset-password` | POST   | accountId, password; requires change on next login                            |
 
-New employee/manager/admin accounts receive a temporary password and must change
-it before protected business operations. The initial administrator sets their
+New employee/manager/admin accounts sign in directly to their dashboard using
+the password set during creation, without a mandatory first-login change.
+Administrator password resets still require a change at next sign-in.
+The initial administrator sets their
 own password. Password changes require a fresh sign-in. Manager team assignments
 and employee business records will be separate from login accounts.
 

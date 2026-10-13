@@ -100,7 +100,7 @@ export function usePeopleDirectory({
       });
       const messages: Record<Action, string> = {
         create:
-          "Account created. Share the temporary password privately; the employee will choose their own at first sign-in.",
+          "Account created. Share the sign-in credentials privately; they can sign in directly to their dashboard.",
         edit: "Account details updated.",
         reset: "Temporary password saved. Existing sessions have been revoked.",
         disable: "Account disabled. Access has been revoked.",

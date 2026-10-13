@@ -1,10 +1,18 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import { LucideIcon } from "lucide-react";
 export type NavigationItem = {
   id: string;
   label: string;
-  icon: string;
+  icon: string | LucideIcon;
   count?: number | string;
+};
+export type WorkspaceSidebarProps = {
+  navigationLabel: string;
+  navigationClassName: string;
+  items: NavigationItem[];
+  activeItem: string;
+  onNavigate: (id: string) => void;
 };
 export function WorkspaceSidebar({
   navigationLabel,
@@ -12,13 +20,7 @@ export function WorkspaceSidebar({
   items,
   activeItem,
   onNavigate,
-}: {
-  navigationLabel: string;
-  navigationClassName: string;
-  items: NavigationItem[];
-  activeItem: string;
-  onNavigate: (id: string) => void;
-}) {
+}: WorkspaceSidebarProps) {
   return (
     <aside className="sidebar">
       <nav aria-label={navigationLabel} className={navigationClassName}>
@@ -29,7 +31,13 @@ export function WorkspaceSidebar({
             onClick={() => onNavigate(item.id)}
             aria-current={activeItem === item.id ? "page" : undefined}
           >
-            <span aria-hidden="true">{item.icon}</span>
+            <span aria-hidden="true">
+              {typeof item.icon === "string" ? (
+                item.icon
+              ) : (
+                <item.icon size={16} />
+              )}
+            </span>
             {item.label}
             {item.count !== undefined && (
               <span className="nav-count">{item.count}</span>

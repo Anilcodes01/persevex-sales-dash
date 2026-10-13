@@ -1,8 +1,10 @@
 import type { Account } from "../types";
 import { HttpError } from "../http/helpers";
+import type { SaleChange } from "../realtime/sales-live";
 
 // Shared storage operations run inside the organisation Durable Object.
 export class AuthStore {
+  onSalesChanged?: (change: SaleChange) => void;
   constructor(public readonly storage: DurableObjectStorage) {}
 
   accountForSession(tokenHash: string): Account {
@@ -50,5 +52,4 @@ export class AuthStore {
       now + 15 * 60 * 1000,
     );
   }
-
 }

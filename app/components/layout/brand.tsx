@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 export function Brand({
   href = "/",
@@ -8,8 +9,7 @@ export function Brand({
 }) {
   return (
     <Link className="brand" href={href} aria-label={label}>
-      <span className="brand-mark">P</span>persevex
-      <span className="brand-dot">.</span>
+      <Image src={"/logo/lms-logo.png"} alt="LMS Logo" width={100} height={100} />
     </Link>
   );
 }

@@ -5,6 +5,7 @@ import type { PeopleDirectory } from "../../hooks/use-people-directory";
 import { PageHeading } from "../layout/page-heading";
 import { PeopleFilters } from "./people-filters";
 import { PeopleTable } from "./people-table";
+import { ListPagination } from "../layout/list-pagination";
 import { PeopleStats } from "./people-stats";
 export function PeoplePanel({
   account,
@@ -30,7 +31,6 @@ export function PeoplePanel({
   return (
     <>
       <PageHeading
-        eyebrow="WORKSPACE"
         title="People"
         description="Manage accounts, job roles and access."
         action={
@@ -74,30 +74,14 @@ export function PeoplePanel({
             </p>
           </div>
         )}
-        <footer className="table-footer">
-          <span>
-            {loading
-              ? "Loading directory…"
-              : `${roster?.total ?? 0} account${roster?.total === 1 ? "" : "s"} found`}
-          </span>
-          <div>
-            <Button
-              disabled={loading || page === 1}
-              onClick={() => setPage(page - 1)}
-            >
-              ← Previous
-            </Button>
-            <span>Page {page}</span>
-            <Button
-              disabled={
-                loading || !roster || page * roster.pageSize >= roster.total
-              }
-              onClick={() => setPage(page + 1)}
-            >
-              Next →
-            </Button>
-          </div>
-        </footer>
+        <ListPagination
+          total={roster?.total ?? 0}
+          page={page}
+          pageSize={roster?.pageSize ?? 25}
+          loading={loading}
+          onPage={setPage}
+          noun="accounts"
+        />
       </section>
     </>
   );

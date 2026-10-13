@@ -13,12 +13,14 @@ export function WorkspaceDialog({
   children,
   onClose,
   locked,
+  className = "",
 }: {
   title: string;
   description: string;
   children: ReactNode;
   onClose: () => void;
   locked: boolean;
+  className?: string;
 }) {
   return (
     <Dialog
@@ -28,7 +30,7 @@ export function WorkspaceDialog({
       }}
     >
       <DialogContent
-        className="account-dialog"
+        className={`account-dialog ${className}`.trim()}
         showCloseButton={!locked}
         onEscapeKeyDown={(event) => {
           if (locked) event.preventDefault();
