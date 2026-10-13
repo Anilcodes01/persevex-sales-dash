@@ -1,4 +1,5 @@
 "use client";
+import { useNotificationState } from "../hooks/use-notification-state";
 import { useState } from "react";
 import { api } from "../lib/api";
 import { jobRoleLabel } from "../../shared/roles";
@@ -8,18 +9,16 @@ import type { EmployeeDashboardProps } from "./employee/types";
 import { WorkspaceShell } from "./layout/workspace-shell";
 import { WorkspaceSidebar } from "./layout/workspace-sidebar";
 import { PageHeading } from "./layout/page-heading";
-import { WorkspaceFooter } from "./layout/workspace-footer";
 
 export default function EmployeeDashboard({
   account,
-  statusMessage,
   onSessionExpired,
   onSignedOut,
   onPasswordChanged,
 }: EmployeeDashboardProps) {
   const [view, setView] = useState<"overview" | "account">("overview");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [, setError] = useNotificationState();
   async function logout() {
     setBusy(true);
     setError("");
@@ -34,11 +33,6 @@ export default function EmployeeDashboard({
   }
   const sidebar = (
     <WorkspaceSidebar
-      account={account}
-      accountLabel={jobRoleLabel(account.jobRole)}
-      homeHref="/employee"
-      homeLabel="Employee dashboard"
-      workspaceLabel="MY WORKSPACE"
       navigationLabel="Employee workspace"
       navigationClassName="employee-nav"
       items={[
@@ -49,20 +43,22 @@ export default function EmployeeDashboard({
       onNavigate={(id) => {
         if (id === "overview" || id === "account") setView(id);
       }}
-      noteTitle="Your personal workspace"
-      noteDescription="Your account and team."
-      settingsLabel="Account settings"
-      onSettings={() => setView("account")}
-      onLogout={logout}
-      signingOut={busy}
     />
   );
   return (
     <WorkspaceShell
       sidebar={sidebar}
-      workspace="My workspace"
-      page={view === "overview" ? "Overview" : "My account"}
-      badge="MY WORKSPACE"
+      navbar={{
+        account,
+        accountLabel: jobRoleLabel(account.jobRole),
+        homeHref: "/employee",
+        homeLabel: "Employee dashboard",
+        page: view === "overview" ? "Overview" : "My account",
+        settingsLabel: "Account settings",
+        onSettings: () => setView("account"),
+        onLogout: logout,
+        signingOut: busy,
+      }}
       className="employee-shell"
     >
       <PageHeading
@@ -84,11 +80,7 @@ export default function EmployeeDashboard({
           </span>
         }
       />
-      {(statusMessage || error) && (
-        <p className="notice error" role="alert">
-          {error || statusMessage}
-        </p>
-      )}
+
       {view === "account" ? (
         <AccountSettings
           account={account}
@@ -101,7 +93,6 @@ export default function EmployeeDashboard({
           onAccount={() => setView("account")}
         />
       )}
-      <WorkspaceFooter description="Your personal account and performance." />
     </WorkspaceShell>
   );
 }

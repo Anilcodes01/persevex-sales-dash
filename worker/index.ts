@@ -16,10 +16,7 @@ export default {
     ) {
       if (request.method !== "GET" && request.method !== "POST")
         return json({ error: "Method not allowed" }, 405);
-      if (
-        request.method === "POST" &&
-        !isAllowedRequestOrigin(request, env)
-      )
+      if (request.method === "POST" && !isAllowedRequestOrigin(request, env))
         return json({ error: "Invalid request origin" }, 403);
       return env.ORGANISATION.getByName("persevex").fetch(request);
     }

@@ -1,4 +1,5 @@
 "use client";
+import { useNotificationState } from "../hooks/use-notification-state";
 
 import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useState } from "react";
@@ -13,7 +14,7 @@ export default function EmployeeTeam({
     team: Team | null;
     teams?: Team[];
   } | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useNotificationState();
   const load = useCallback(
     () =>
       api<{ team: Team | null; teams?: Team[] }>(
@@ -28,7 +29,7 @@ export default function EmployeeTeam({
             err instanceof Error ? err.message : "Unable to load your team",
           ),
         ),
-    [manager],
+    [manager, setError],
   );
   useEffect(() => {
     void load();
@@ -52,17 +53,13 @@ export default function EmployeeTeam({
           {manager
             ? "Teams you oversee. Your administrator manages these assignments."
             : result?.team
-              ? `Manager: ${result.team.managerName || "No active manager assigned"}`
+              ? `Team Lead: ${result.team.managerName || "No active team lead assigned"}`
               : result
                 ? "Your administrator can assign you to a team."
                 : "Your team details will appear here."}
         </p>
       </div>
-      {error && (
-        <p className="notice error" role="alert">
-          {error} <Button onClick={load}>Retry</Button>
-        </p>
-      )}
+      {error && <Button onClick={load}>Retry</Button>}
     </section>
   );
 }

@@ -20,12 +20,18 @@ export function teamDirectory(store: AuthStore) {
   const managers = store.storage.sql
     .exec<{ id: string; displayName: string; active: number; teamId: string }>(
       `SELECT a.id, a.display_name AS displayName, a.active, m.team_id AS teamId
-    FROM manager_assignments m JOIN accounts a ON a.id = m.account_id WHERE m.ends_at IS NULL AND a.role = 'manager'`,
+    FROM manager_assignments m JOIN accounts a ON a.id = m.account_id WHERE m.ends_at IS NULL `,
     )
     .toArray();
   const people = store.storage.sql
-    .exec<{ id: string; displayName: string; email: string; role: string }>(
-      `SELECT id, display_name AS displayName, email, role FROM accounts WHERE active = 1 AND role IN ('employee', 'manager') ORDER BY display_name`,
+    .exec<{
+      id: string;
+      displayName: string;
+      email: string;
+      role: string;
+      jobRole: string;
+    }>(
+      `SELECT id, display_name AS displayName, email, role, job_role AS jobRole FROM accounts WHERE active = 1 ORDER BY display_name`,
     )
     .toArray();
   return {
@@ -44,7 +50,7 @@ export function employeeTeam(accountId: string, store: AuthStore) {
         `SELECT t.id, t.name, a.display_name AS managerName
     FROM team_memberships m JOIN teams t ON t.id = m.team_id
     LEFT JOIN manager_assignments ma ON ma.team_id = t.id AND ma.ends_at IS NULL
-    LEFT JOIN accounts a ON a.id = ma.account_id AND a.active = 1 AND a.role = 'manager'
+    LEFT JOIN accounts a ON a.id = ma.account_id AND a.active = 1 
     WHERE m.account_id = ? AND m.ends_at IS NULL`,
         accountId,
       )

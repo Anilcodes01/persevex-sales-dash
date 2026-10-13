@@ -3,14 +3,12 @@ import { Button } from "@/components/ui/button";
 import type { Account } from "../../lib/api";
 import type { PeopleDirectory } from "../../hooks/use-people-directory";
 import { PageHeading } from "../layout/page-heading";
-import { WorkspaceFooter } from "../layout/workspace-footer";
 import { PeopleFilters } from "./people-filters";
 import { PeopleTable } from "./people-table";
 import { PeopleStats } from "./people-stats";
 export function PeoplePanel({
   account,
   directory,
-  statusMessage,
 }: {
   account: Account;
   directory: PeopleDirectory;
@@ -19,7 +17,6 @@ export function PeoplePanel({
   const {
     roster,
     loading,
-    notice,
     error,
     refresh,
     open,
@@ -43,21 +40,8 @@ export function PeoplePanel({
         }
       />
       <PeopleStats stats={roster?.stats} />
-      {statusMessage && (
-        <p className="notice error" role="alert">
-          {statusMessage}
-        </p>
-      )}
-      {notice && (
-        <p className="notice success" role="status">
-          {notice}
-        </p>
-      )}
-      {error && (
-        <p className="notice error" role="alert">
-          {error} <Button onClick={refresh}>Retry</Button>
-        </p>
-      )}
+
+      {error && <Button onClick={refresh}>Retry</Button>}
       <section className="roster-panel" aria-labelledby="roster-title">
         <div className="panel-title">
           <div>
@@ -115,7 +99,6 @@ export function PeoplePanel({
           </div>
         </footer>
       </section>
-      <WorkspaceFooter description="Employee access is managed by administrators." />
     </>
   );
 }

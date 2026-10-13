@@ -1,4 +1,5 @@
 "use client";
+import { FormSelect, SelectOption } from "../forms/form-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,7 +46,7 @@ export function PeopleFilters({ directory }: { directory: PeopleDirectory }) {
       <Label className="sr-only" htmlFor="role-filter">
         Filter role
       </Label>
-      <select
+      <FormSelect
         id="role-filter"
         value={role}
         onChange={(event) => {
@@ -53,15 +54,15 @@ export function PeopleFilters({ directory }: { directory: PeopleDirectory }) {
           setPage(1);
         }}
       >
-        <option value="all">All access levels</option>
-        <option value="employee">Employees</option>
-        <option value="manager">Managers</option>
-        <option value="admin">Administrators</option>
-      </select>
+        <SelectOption value="all">All access levels</SelectOption>
+        <SelectOption value="employee">Employees</SelectOption>
+        <SelectOption value="manager">Managers</SelectOption>
+        <SelectOption value="admin">Administrators</SelectOption>
+      </FormSelect>
       <Label className="sr-only" htmlFor="job-role-filter">
         Filter job role
       </Label>
-      <select
+      <FormSelect
         id="job-role-filter"
         value={jobRole}
         onChange={(event) => {
@@ -69,17 +70,17 @@ export function PeopleFilters({ directory }: { directory: PeopleDirectory }) {
           setPage(1);
         }}
       >
-        <option value="all">All job roles</option>
+        <SelectOption value="all">All job roles</SelectOption>
         {JOB_ROLES.map((item) => (
-          <option key={item.value} value={item.value}>
+          <SelectOption key={item.value} value={item.value}>
             {item.label}
-          </option>
+          </SelectOption>
         ))}
-      </select>
+      </FormSelect>
       <Label className="sr-only" htmlFor="status-filter">
         Filter status
       </Label>
-      <select
+      <FormSelect
         id="status-filter"
         value={status}
         onChange={(event) => {
@@ -87,10 +88,10 @@ export function PeopleFilters({ directory }: { directory: PeopleDirectory }) {
           setPage(1);
         }}
       >
-        <option value="all">All statuses</option>
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-      </select>
+        <SelectOption value="all">All statuses</SelectOption>
+        <SelectOption value="active">Active</SelectOption>
+        <SelectOption value="inactive">Inactive</SelectOption>
+      </FormSelect>
     </div>
   );
 }

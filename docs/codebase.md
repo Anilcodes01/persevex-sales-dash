@@ -54,12 +54,16 @@ app/
   components/
     layout/
       brand.tsx                  Shared logo link
-      workspace-sidebar.tsx      Navigation, account identity and session actions
-      workspace-navbar.tsx       Breadcrumb and workspace badge
+      workspace-sidebar.tsx      Navigation only
+      workspace-navbar.tsx       Full-width brand, current page and account menu
+      account-menu.tsx           Account actions and Light/Dark/System theme choices
+      theme-provider.tsx         Persistent appearance preference
       workspace-shell.tsx        Layout composition only
       page-heading.tsx           Page title and action slot
       workspace-footer.tsx       Shared footer
       workspace-dialog.tsx       Accessible dialog and save/dismissal guards
+    forms/
+      form-select.tsx            Shared shadcn select adapter for forms and filters
     admin/
       people-panel.tsx           People view composition and pagination
       people-stats.tsx           Account summary statistics
@@ -86,6 +90,11 @@ components own their forms and domain UI, while hooks handle asynchronous state
 and API operations. New workspace pages should reuse the shell, sidebar and
 navbar instead of duplicating them. The refactor changes no API or database schema.
 
+`scripts/dev.mjs` starts the hot-reloading Next frontend and local Wrangler backend
+together. Development API rewrites live in `next.config.ts`; production remains a
+static export. `worker/security/request-origin.ts` handles the proxy's local-only
+origin exception. See `docs/local-development.md` for commands and persistence.
+
 Shared job-role labels and validators live in `shared/roles.ts`. Authentication
 permissions still use Employee/Manager/Administrator access, separate from job
 titles. `components/ui/` contains the shadcn primitives; `lib/utils.ts` supplies
@@ -105,3 +114,7 @@ not another service or database. Security helpers do not own storage.
 Future team, sale and approval APIs should get their own route modules and
 storage helpers. Keep the entrypoint small and enforce permissions in the
 organisation router before calling protected handlers.
+
+The navbar spans the workspace above the navigation sidebar. Account settings
+and sign-out live in its shadcn dropdown menu. Appearance is managed by
+`next-themes`; forms and filters use the shared shadcn Select adapter.

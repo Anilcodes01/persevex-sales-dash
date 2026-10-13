@@ -1,4 +1,5 @@
 "use client";
+import { useNotificationState } from "./use-notification-state";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Account, ApiError, RosterAccount, api } from "../lib/api";
 import type { Roster, Action, Selection } from "../components/admin/types";
@@ -25,9 +26,9 @@ export function usePeopleDirectory({
   const loading = refreshing || loadedKey !== filterKey;
   const [selection, setSelection] = useState<Selection | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [dialogError, setDialogError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [error, setError] = useNotificationState();
+  const [dialogError, setDialogError] = useNotificationState();
+  const [notice, setNotice] = useNotificationState("success");
   const load = useCallback(() => {
     const serial = ++requestSerial.current;
     const params = new URLSearchParams({
@@ -56,7 +57,16 @@ export function usePeopleDirectory({
           setRefreshing(false);
         }
       });
-  }, [search, role, jobRole, status, page, filterKey, onSessionExpired]);
+  }, [
+    search,
+    role,
+    jobRole,
+    status,
+    page,
+    filterKey,
+    onSessionExpired,
+    setError,
+  ]);
   useEffect(() => {
     void load();
   }, [load]);

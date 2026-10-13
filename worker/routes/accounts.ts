@@ -132,7 +132,7 @@ export function createAccount(
   )
     throw new HttpError(
       400,
-      "Provide a name, email, role and a 15–128 character password",
+      "Provide a name, email, role and a 6–128 character password",
     );
   if (
     store.storage.sql
@@ -203,7 +203,7 @@ export function resetPassword(
   if (typeof body.accountId !== "string" || !validPassword(body.password))
     throw new HttpError(
       400,
-      "Account ID and a 15–128 character temporary password are required",
+      "Account ID and a 6–128 character temporary password are required",
     );
   if (
     !store.storage.sql

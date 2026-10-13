@@ -1,6 +1,7 @@
 "use client";
+import { useNotificationState } from "../hooks/use-notification-state";
+import { FormSelect, SelectOption } from "./forms/form-select";
 import { PageHeading } from "./layout/page-heading";
-import { WorkspaceFooter } from "./layout/workspace-footer";
 import { Badge } from "@/components/ui/badge";
 
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { ApiError, api } from "../lib/api";
-type Person = { id: string; displayName: string; email: string; role: string };
+type Person = {
+  id: string;
+  displayName: string;
+  email: string;
+  role: string;
+  jobRole: string;
+};
 type Member = {
   id: string;
   displayName: string;
@@ -30,8 +37,8 @@ export default function TeamsPanel({
   const [data, setData] = useState<Directory | null>(null);
   const [selectedId, setSelectedId] = useState("");
   const [creating, setCreating] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [error, setError] = useNotificationState();
+  const [, setNotice] = useNotificationState("success");
   const [busy, setBusy] = useState(false);
   const load = useCallback(
     () =>
@@ -44,7 +51,7 @@ export default function TeamsPanel({
           if (err instanceof ApiError && err.status === 401) onSessionExpired();
           setError(err instanceof Error ? err.message : "Could not load teams");
         }),
-    [onSessionExpired],
+    [onSessionExpired, setError],
   );
   useEffect(() => {
     void load();
@@ -101,14 +108,14 @@ export default function TeamsPanel({
     )
       form.reset();
   }
-  const managers =
-    data?.people.filter((person) => person.role === "manager") || [];
+  const teamLeads =
+    data?.people.filter((person) => person.jobRole === "team_lead") || [];
   return (
     <>
       <PageHeading
         eyebrow="STRONGER TOGETHER"
         title="Organise your teams."
-        description="Assign employees and give each team a manager."
+        description="Assign employees and give each team a team lead."
         action={
           <Button
             className="button primary"
@@ -119,16 +126,8 @@ export default function TeamsPanel({
           </Button>
         }
       />
-      {error && (
-        <p className="notice error" role="alert">
-          {error} <Button onClick={load}>Retry</Button>
-        </p>
-      )}
-      {notice && (
-        <p className="notice success" role="status">
-          {notice}
-        </p>
-      )}
+      {error && <Button onClick={load}>Retry</Button>}
+
       {creating && (
         <section className="roster-panel team-create">
           <div className="panel-title">
@@ -148,15 +147,15 @@ export default function TeamsPanel({
               />
             </Label>
             <Label>
-              Manager
-              <select name="managerId" defaultValue="">
-                <option value="">Assign later</option>
-                {managers.map((person) => (
-                  <option key={person.id} value={person.id}>
+              Team Lead
+              <FormSelect name="managerId" defaultValue="">
+                <SelectOption value="">Assign later</SelectOption>
+                {teamLeads.map((person) => (
+                  <SelectOption key={person.id} value={person.id}>
                     {person.displayName} · {person.email}
-                  </option>
+                  </SelectOption>
                 ))}
-              </select>
+              </FormSelect>
             </Label>
             <Button className="button primary" disabled={busy}>
               {busy ? "Saving…" : "Create team"}
@@ -196,7 +195,7 @@ export default function TeamsPanel({
                   <span>
                     {item.members.length} member
                     {item.members.length === 1 ? "" : "s"} ·{" "}
-                    {item.manager?.displayName || "No manager"}
+                    {item.manager?.displayName || "No team lead"}
                     {item.manager && !item.manager.active ? " (inactive)" : ""}
                   </span>
                 </Button>
@@ -209,7 +208,8 @@ export default function TeamsPanel({
                 <div>
                   <h2>{team.name}</h2>
                   <p>
-                    One manager per team. A manager may oversee several teams.
+                    One team lead per team. A team lead may oversee several
+                    teams.
                   </p>
                 </div>
               </div>
@@ -228,23 +228,23 @@ export default function TeamsPanel({
                   />
                 </Label>
                 <Label>
-                  Manager
-                  <select
+                  Team Lead
+                  <FormSelect
                     name="managerId"
                     defaultValue={team.manager?.id || ""}
                   >
-                    <option value="">No manager</option>
+                    <SelectOption value="">No team lead</SelectOption>
                     {team.manager && !team.manager.active && (
-                      <option value={team.manager.id} disabled>
+                      <SelectOption value={team.manager.id} disabled>
                         {team.manager.displayName} (inactive — choose another)
-                      </option>
+                      </SelectOption>
                     )}
-                    {managers.map((person) => (
-                      <option key={person.id} value={person.id}>
+                    {teamLeads.map((person) => (
+                      <SelectOption key={person.id} value={person.id}>
                         {person.displayName} · {person.email}
-                      </option>
+                      </SelectOption>
                     ))}
-                  </select>
+                  </FormSelect>
                 </Label>
                 <Button className="button primary" disabled={busy}>
                   {busy ? "Saving…" : "Save team"}
@@ -264,10 +264,10 @@ export default function TeamsPanel({
               >
                 <Label>
                   Assign an employee
-                  <select name="accountId" required defaultValue="">
-                    <option value="" disabled>
+                  <FormSelect name="accountId" required defaultValue="">
+                    <SelectOption value="" disabled>
                       Select employee
-                    </option>
+                    </SelectOption>
                     {data.people
                       .filter(
                         (person) =>
@@ -277,11 +277,11 @@ export default function TeamsPanel({
                           ),
                       )
                       .map((person) => (
-                        <option key={person.id} value={person.id}>
+                        <SelectOption key={person.id} value={person.id}>
                           {person.displayName} · {person.email}
-                        </option>
+                        </SelectOption>
                       ))}
-                  </select>
+                  </FormSelect>
                   <span className="field-help">
                     Assigning someone from another team transfers them. Their
                     history is retained.
@@ -326,7 +326,6 @@ export default function TeamsPanel({
           </div>
         </div>
       )}
-      <WorkspaceFooter description="Team assignments are managed by administrators." />
     </>
   );
 }

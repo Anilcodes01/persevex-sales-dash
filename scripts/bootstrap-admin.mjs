@@ -29,8 +29,8 @@ async function main() {
   if (typeof credentials.secret !== 'string' || !credentials.secret) {
     throw new Error('Provide "secret" matching BOOTSTRAP_ADMIN_SECRET in .dev.vars.');
   }
-  if (typeof credentials.password !== 'string' || credentials.password.length < 15 || credentials.password.length > 128) {
-    throw new Error('The administrator password must contain 15–128 characters.');
+  if (typeof credentials.password !== 'string' || credentials.password.length < 6 || credentials.password.length > 128) {
+    throw new Error('The administrator password must contain 6–128 characters.');
   }
   let response;
   try {

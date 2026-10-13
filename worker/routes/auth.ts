@@ -74,7 +74,7 @@ export function changePassword(body: Record<string, unknown>, actor: Account, st
   )
     throw new HttpError(
       400,
-      "Use a new password between 15 and 128 characters",
+      "Use a new password between 6 and 128 characters",
     );
   if (!verifyPassword(body.currentPassword, actor.password_hash))
     throw new HttpError(401, "Current password is incorrect");

@@ -21,11 +21,6 @@ export default function AdminDashboard(props: AdminDashboardProps) {
   const directory = usePeopleDirectory(props);
   const sidebar = (
     <WorkspaceSidebar
-      account={props.account}
-      accountLabel="Administrator"
-      homeHref="/"
-      homeLabel="Persevex home"
-      workspaceLabel="SALES WORKSPACE"
       navigationLabel="Administration"
       navigationClassName="admin-navigation"
       items={[
@@ -41,20 +36,22 @@ export default function AdminDashboard(props: AdminDashboardProps) {
       onNavigate={(id) => {
         if (id === "people" || id === "teams") setView(id);
       }}
-      noteTitle="Administration"
-      noteDescription="Manage who has access to your sales workspace."
-      settingsLabel="Change password"
-      onSettings={props.onPassword}
-      onLogout={props.onLogout}
     />
   );
   return (
     <>
       <WorkspaceShell
         sidebar={sidebar}
-        workspace="Workspace"
-        page={view === "teams" ? "Teams" : "People"}
-        badge="ADMIN CONSOLE"
+        navbar={{
+          account: props.account,
+          accountLabel: "Administrator",
+          homeHref: "/",
+          homeLabel: "Persevex home",
+          page: view === "teams" ? "Teams" : "People",
+          settingsLabel: "Change password",
+          onSettings: props.onPassword,
+          onLogout: props.onLogout,
+        }}
       >
         {view === "teams" ? (
           <TeamsPanel onSessionExpired={props.onSessionExpired} />

@@ -1,4 +1,6 @@
 "use client";
+import { toast } from "sonner";
+import { useNotificationState } from "./hooks/use-notification-state";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +25,7 @@ export default function Home() {
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useNotificationState();
   const [changingPassword, setChangingPassword] = useState(false);
   const passwordMode = Boolean(
     account && (account.mustChangePassword || changingPassword),
@@ -44,7 +46,7 @@ export default function Home() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [setMessage]);
   useEffect(() => {
     if (account && account.role !== "admin" && !passwordMode)
       router.replace("/employee");
@@ -53,7 +55,7 @@ export default function Home() {
     setAccount(null);
     setChangingPassword(false);
     setMessage("Your session has ended. Please sign in again.");
-  }, []);
+  }, [setMessage]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -72,7 +74,7 @@ export default function Home() {
         });
         setAccount(null);
         setChangingPassword(false);
-        setMessage("Password changed. Sign in with your new password.");
+        toast.success("Password changed. Sign in with your new password.");
       } else {
         const result = await api<{ account: Account }>(
           "/api/auth/login",
@@ -219,12 +221,12 @@ export default function Home() {
                         name="newPassword"
                         type="password"
                         autoComplete="new-password"
-                        minLength={15}
+                        minLength={6}
                         maxLength={128}
                         required
                       />
                       <span className="mt-2 block text-xs text-zinc-500">
-                        Use 15–128 characters. A long passphrase works well.
+                        Use 6–128 characters. A long passphrase works well.
                       </span>
                     </Label>
                     <Label className="block text-sm font-medium">
@@ -234,7 +236,7 @@ export default function Home() {
                         name="confirmPassword"
                         type="password"
                         autoComplete="new-password"
-                        minLength={15}
+                        minLength={6}
                         maxLength={128}
                         required
                       />
@@ -270,11 +272,6 @@ export default function Home() {
               </div>
             )}
           </>
-        )}
-        {message && (
-          <p role="status" className="mt-5 text-sm">
-            {message}
-          </p>
         )}
       </section>
     </main>

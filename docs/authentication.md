@@ -4,7 +4,7 @@ Accounts use normalised email addresses and salted scrypt hashes via
 `@noble/hashes`. The versioned profile is N=16384, r=8, p=5, with a 16-byte salt
 and 32-byte derived key. It is one of OWASP's minimum scrypt profiles:
 https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
-Password length is 15–128 characters; passwords are never trimmed.
+Password length is 6–128 characters; passwords are never trimmed.
 
 Hashing runs in the organisation Durable Object. Benchmark real Cloudflare CPU,
 duration and concurrent login impact before rollout: Node tests are not platform
@@ -25,8 +25,9 @@ verification in a separate object before launch.
    secret after setup. Bootstrap refuses any further creation once an account
    exists, even if the secret remains configured.
 
-The Next.js development server alone does not serve these Worker endpoints.
-Use the Cloudflare runtime for integrated authentication testing. Secure cookies
+`npm run dev` starts Next.js and the local Cloudflare backend together, forwarding
+API requests from localhost:3000. A standalone Next.js process still needs a
+running backend. See `docs/local-development.md`. Secure cookies
 work on browser localhost; production requires HTTPS. Do not deploy real
 credentials over HTTP.
 
@@ -85,7 +86,8 @@ should show a generic login error. No public self-registration is available.
 
 `npm run cf:dev` builds the static frontend and serves both the frontend and API
 at the local URL printed by Wrangler (normally `http://localhost:8787`).
-`npm run dev` starts only Next.js and cannot complete this sign-in flow.
+`npm run dev` starts both processes with UI hot reload at localhost:3000.
+`npm run cf:dev` remains the build-once Cloudflare preview.
 
 ## Checks
 

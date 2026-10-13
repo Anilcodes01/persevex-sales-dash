@@ -1,19 +1,23 @@
-import { Badge } from "@/components/ui/badge";
-export function WorkspaceNavbar({
-  workspace,
-  page,
-  badge,
-}: {
-  workspace: string;
+import { Brand } from "./brand";
+import { AccountMenu, type AccountMenuProps } from "./account-menu";
+export type WorkspaceNavbarProps = AccountMenuProps & {
+  homeHref: string;
+  homeLabel: string;
   page: string;
-  badge: string;
-}) {
+};
+export function WorkspaceNavbar({
+  homeHref,
+  homeLabel,
+  page,
+  ...accountProps
+}: WorkspaceNavbarProps) {
   return (
     <header className="workspace-header">
-      <span>
-        {workspace} <span className="breadcrumb-slash">/</span>
-        <strong>{page}</strong>
-      </span>
+      <div className="navbar-left">
+        <Brand href={homeHref} label={homeLabel} />
+        <span className="navbar-page">{page}</span>
+      </div>
+      <AccountMenu {...accountProps} />
     </header>
   );
 }

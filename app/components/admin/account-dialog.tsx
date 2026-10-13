@@ -1,4 +1,5 @@
 "use client";
+import { FormSelect, SelectOption } from "../forms/form-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +8,7 @@ import { WorkspaceDialog } from "../layout/workspace-dialog";
 import type { PeopleDirectory } from "../../hooks/use-people-directory";
 import { ACCOUNT_ACTION_TITLES } from "./types";
 export function AccountDialog({ directory }: { directory: PeopleDirectory }) {
-  const { selection, busy, setSelection, mutate, dialogError } = directory;
+  const { selection, busy, setSelection, mutate } = directory;
   if (!selection) return null;
   return (
     <WorkspaceDialog
@@ -46,27 +47,27 @@ export function AccountDialog({ directory }: { directory: PeopleDirectory }) {
             </Label>
             <Label>
               Job role
-              <select
+              <FormSelect
                 name="jobRole"
                 defaultValue={selection.account?.jobRole ?? "employee"}
               >
                 {JOB_ROLES.map((item) => (
-                  <option key={item.value} value={item.value}>
+                  <SelectOption key={item.value} value={item.value}>
                     {item.label}
-                  </option>
+                  </SelectOption>
                 ))}
-              </select>
+              </FormSelect>
             </Label>
             <Label>
               Workspace access
-              <select
+              <FormSelect
                 name="role"
                 defaultValue={selection.account?.role ?? "employee"}
               >
-                <option value="employee">Employee</option>
-                <option value="manager">Manager</option>
-                <option value="admin">Administrator</option>
-              </select>
+                <SelectOption value="employee">Employee</SelectOption>
+                <SelectOption value="manager">Manager</SelectOption>
+                <SelectOption value="admin">Administrator</SelectOption>
+              </FormSelect>
               <span className="field-help">
                 Controls permissions separately from the job title. Choose
                 Manager access to oversee teams.
@@ -81,13 +82,13 @@ export function AccountDialog({ directory }: { directory: PeopleDirectory }) {
               <Input
                 name="password"
                 type="password"
-                minLength={15}
+                minLength={6}
                 maxLength={128}
                 autoComplete="new-password"
                 required
               />
               <span className="field-help">
-                15–128 characters. They must change it at first sign-in.
+                6–128 characters. They must change it at first sign-in.
               </span>
             </Label>
             {selection.action === "reset" && (
@@ -105,11 +106,7 @@ export function AccountDialog({ directory }: { directory: PeopleDirectory }) {
               : `${selection.account?.displayName} will be able to sign in again with their existing credentials.`}
           </p>
         )}
-        {dialogError && (
-          <p className="notice error" role="alert">
-            {dialogError}
-          </p>
-        )}
+
         <div className="dialog-footer">
           <Button
             type="button"

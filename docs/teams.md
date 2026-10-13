@@ -39,3 +39,8 @@ After deployment, create two teams, assign a manager, move a synthetic employee
 between teams, and inspect the employee dashboard. The membership table should
 retain both records with only the current one having `ends_at = NULL`. Sales
 and manager approval workflows will be built on these assignments next.
+
+Team creation and editing now select active accounts with the **Team Lead** job
+role, regardless of their access level. The API retains `managerId` and existing
+`manager_assignments` storage for compatibility and preserves assignment history.
+Existing assignments remain visible; new assignments require a Team Lead.

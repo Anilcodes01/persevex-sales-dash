@@ -8,10 +8,17 @@ export default function nextConfig(phase: string): NextConfig {
     distDir: development ? ".next-dev" : ".next",
     images: { unoptimized: true },
     experimental: { agentFeedback: true },
-    ...(development ? {
-      async rewrites() {
-        return [{ source: "/api/:path*", destination: "http://127.0.0.1:8787/api/:path*" }];
-      },
-    } : {}),
+    ...(development
+      ? {
+          async rewrites() {
+            return [
+              {
+                source: "/api/:path*",
+                destination: "http://127.0.0.1:8787/api/:path*",
+              },
+            ];
+          },
+        }
+      : {}),
   };
 }

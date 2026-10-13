@@ -1,6 +1,13 @@
 "use client";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { MoreHorizontal, User } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableHeader,
@@ -42,7 +49,9 @@ export function PeopleTable({
             <TableRow key={person.id}>
               <TableCell>
                 <div className="person-cell">
-                  <span className="avatar">{initials(person.displayName)}</span>
+                  <span className="">
+                    <User className="" />
+                  </span>
                   <div>
                     <strong>
                       {person.displayName}
@@ -53,14 +62,10 @@ export function PeopleTable({
                 </div>
               </TableCell>
               <TableCell>
-                <Badge className="role-tag">
-                  {jobRoleLabel(person.jobRole)}
-                </Badge>
+                <div>{jobRoleLabel(person.jobRole)}</div>
               </TableCell>
               <TableCell>
-                <Badge className={`role-tag ${person.role}`}>
-                  {accessLabel(person.role)}
-                </Badge>
+                <div>{accessLabel(person.role)}</div>
               </TableCell>
               <TableCell>
                 <span
@@ -69,11 +74,6 @@ export function PeopleTable({
                   <span />
                   {person.active ? "Active" : "Inactive"}
                 </span>
-                {person.active && person.mustChangePassword && (
-                  <small className="pending-password">
-                    Password change required
-                  </small>
-                )}
               </TableCell>
               <TableCell className="date-cell">
                 {new Date(person.createdAt).toLocaleDateString("en-IN", {
@@ -85,20 +85,38 @@ export function PeopleTable({
               </TableCell>
               <TableCell>
                 <div className="row-actions">
-                  <Button onClick={() => open("edit", person)}>Edit</Button>
-                  <Button onClick={() => open("reset", person)}>
-                    Reset password
-                  </Button>
-                  {person.id !== currentAccountId && (
-                    <Button
-                      className={person.active ? "danger-link" : ""}
-                      onClick={() =>
-                        open(person.active ? "disable" : "enable", person)
-                      }
-                    >
-                      {person.active ? "Disable" : "Reactivate"}
-                    </Button>
-                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Manage ${person.displayName}`}
+                      >
+                        <MoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => open("edit", person)}>
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => open("reset", person)}>
+                        Reset password
+                      </DropdownMenuItem>
+                      {person.id !== currentAccountId && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            variant={person.active ? "destructive" : "default"}
+                            onSelect={() =>
+                              open(person.active ? "disable" : "enable", person)
+                            }
+                          >
+                            {person.active ? "Disable" : "Reactivate"}
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </TableCell>
             </TableRow>

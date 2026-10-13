@@ -11,6 +11,9 @@ plugin. System fonts remove the external Google Fonts download at build time.
 
 ## Commands
 
+- `npm run dev`: start Next.js hot reload and the local Cloudflare backend together.
+  Open localhost:3000. See `docs/local-development.md`.
+
 - `npm run typecheck:worker`: check the backend types.
 - `npm run cf:check`: build the frontend and bundle a deployment locally, without uploading it.
 - `npm run cf:dev`: build and start the local Cloudflare runtime. Run only when requested.

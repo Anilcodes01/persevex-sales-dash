@@ -65,7 +65,7 @@ export function readSession(request: Request) {
 }
 
 export function validPassword(value: unknown): value is string {
-  return typeof value === "string" && value.length >= 15 && value.length <= 128;
+  return typeof value === "string" && value.length >= 6 && value.length <= 128;
 }
 
 export function normaliseEmail(value: unknown) {

@@ -1,4 +1,5 @@
 "use client";
+import { useNotificationState } from "../../hooks/use-notification-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,7 @@ export function AccountSettings({
   "account" | "onPasswordChanged" | "onSessionExpired"
 >) {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [, setError] = useNotificationState();
   async function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -113,12 +114,12 @@ export function AccountSettings({
               type="password"
               name="newPassword"
               autoComplete="new-password"
-              minLength={15}
+              minLength={6}
               maxLength={128}
               required
             />
             <span className="field-help">
-              Use 15–128 characters. Choose a long, memorable passphrase.
+              Use 6–128 characters. Choose a long, memorable passphrase.
             </span>
           </Label>
           <Label>
@@ -127,16 +128,12 @@ export function AccountSettings({
               type="password"
               name="confirmPassword"
               autoComplete="new-password"
-              minLength={15}
+              minLength={6}
               maxLength={128}
               required
             />
           </Label>
-          {error && (
-            <p className="notice error" role="alert">
-              {error}
-            </p>
-          )}
+
           <Button className="button primary" disabled={busy}>
             {busy ? "Saving…" : "Update password"}
           </Button>

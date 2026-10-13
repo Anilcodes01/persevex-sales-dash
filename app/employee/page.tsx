@@ -1,5 +1,7 @@
 "use client";
+import { useNotificationState } from "../hooks/use-notification-state";
 
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 import { useCallback, useEffect, useState } from "react";
@@ -11,7 +13,7 @@ import EmployeeDashboard from "../components/employee-dashboard";
 export default function EmployeePage() {
   const router = useRouter();
   const [account, setAccount] = useState<Account | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useNotificationState();
   const [passwordChanged, setPasswordChanged] = useState(false);
   const loadSession = useCallback(() => {
     return api<{ account: Account }>("/api/auth/me")
@@ -33,7 +35,7 @@ export default function EmployeePage() {
           );
         }
       });
-  }, [router]);
+  }, [router, setError]);
   useEffect(() => {
     void loadSession();
   }, [loadSession]);
@@ -68,7 +70,11 @@ export default function EmployeePage() {
         <section>
           <span className="brand-mark">P</span>
           <h1>{error ? "Unable to connect" : "Opening your workspace"}</h1>
-          <p role="status">{error || "Checking your session…"}</p>
+          <p role="status">
+            {error
+              ? "Try again to load your workspace."
+              : "Checking your session…"}
+          </p>
           {error && (
             <Button className="button primary" onClick={loadSession}>
               Try again
@@ -95,6 +101,7 @@ export default function EmployeePage() {
       onPasswordChanged={() => {
         setAccount(null);
         setPasswordChanged(true);
+        toast.success("Password updated. Sign in with your new password.");
       }}
     />
   );

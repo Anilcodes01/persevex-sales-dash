@@ -89,7 +89,7 @@ Create `.env.admin.production.json` in the project root with this structure:
 }
 ```
 
-Choose a new private password of 15–128 characters. Do not use the example
+Choose a new private password of 6–128 characters. Do not use the example
 placeholder. This file is ignored by Git. Save it, then run:
 
 ```sh

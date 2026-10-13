@@ -15,7 +15,7 @@ export function saveTeam(
   if (!name || name.length > 80 || typeof body.managerId !== "string")
     throw new HttpError(
       400,
-      "Provide a team name (1–80 characters) and manager selection",
+      "Provide a team name (1–80 characters) and team lead selection",
     );
   const teamId =
     typeof body.teamId === "string" && body.teamId
@@ -37,12 +37,12 @@ export function saveTeam(
     body.managerId &&
     !store.storage.sql
       .exec(
-        "SELECT id FROM accounts WHERE id = ? AND active = 1 AND role = 'manager'",
+        "SELECT id FROM accounts WHERE id = ? AND active = 1 AND job_role = 'team_lead'",
         body.managerId,
       )
       .toArray().length
   )
-    throw new HttpError(400, "Select an active manager account");
+    throw new HttpError(400, "Select an active Team Lead account");
   store.storage.transactionSync(() => {
     const now = Date.now();
     if (existing)
