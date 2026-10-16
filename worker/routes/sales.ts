@@ -165,6 +165,7 @@ export async function submitSale(
   });
   store.onSalesChanged?.({
     employeeId: actor.id,
+    submitted: true,
     teamId: body.teamId as string,
     version,
   });

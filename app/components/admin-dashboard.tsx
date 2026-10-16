@@ -1,5 +1,8 @@
 "use client";
-import { useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import type { Account } from "../lib/api";
 import { usePeopleDirectory } from "../hooks/use-people-directory";
 import { TargetsPanel } from "./targets/targets-panel";
@@ -8,6 +11,8 @@ import TeamsPanel from "./teams-panel";
 import { AccountDialog } from "./admin/account-dialog";
 import { PeoplePanel } from "./admin/people-panel";
 import { AdminSalesPanel } from "./admin/admin-sales-panel";
+import { AdminProfile } from "./admin/admin-profile";
+import { HistoryPanel } from "./admin/history-panel";
 import { AdminOverview } from "./admin/admin-overview";
 import { WorkspaceShell } from "./layout/workspace-shell";
 import { WorkspaceSidebar } from "./layout/workspace-sidebar";
@@ -30,8 +35,19 @@ type AdminDashboardProps = {
 };
 export default function AdminDashboard(props: AdminDashboardProps) {
   const [view, setView] = useState<
-    "overview" | "people" | "teams" | "approvals" | "targets" | "sales"
+    "overview" | "people" | "teams" | "approvals" | "targets" | "sales" | "history"
   >("overview");
+  const [profileOpen, setProfileOpen] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("development-reset-result");
+      if (!saved) return;
+      sessionStorage.removeItem("development-reset-result");
+      const result = JSON.parse(saved);
+      if (result.avatarCleanupPending) toast.warning("Data cleared. Some R2 avatar files could not be removed. Retry the reset to finish cleanup.");
+      else toast.success(`Data cleared. Your admin account and ${result.preservedPayments} Cashfree payments were kept.`);
+    } catch { /* Storage may be disabled. */ }
+  }, []);
   const directory = usePeopleDirectory(props);
   const sidebar = (
     <WorkspaceSidebar
@@ -59,6 +75,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
           id === "teams" ||
           id === "sales" ||
           id === "approvals" ||
+          id === "history" ||
           id === "targets"
         )
           setView(id);
@@ -75,8 +92,9 @@ export default function AdminDashboard(props: AdminDashboardProps) {
           homeHref: "/",
           homeLabel: "Persevex home",
 
-          settingsLabel: "Change password",
-          onSettings: props.onPassword,
+          action: <Button asChild variant="outline"><Link href="/tv">Leaderboard</Link></Button>,
+          settingsLabel: "Admin profile",
+          onSettings: () => setProfileOpen(true),
           onLogout: props.onLogout,
         }}
       >
@@ -87,6 +105,8 @@ export default function AdminDashboard(props: AdminDashboardProps) {
             onSales={() => setView("sales")}
             onApprovals={() => setView("approvals")}
           />
+        ) : view === "history" ? (
+          <HistoryPanel account={props.account} onSessionExpired={props.onSessionExpired} />
         ) : view === "sales" ? (
           <AdminSalesPanel
             account={props.account}
@@ -114,6 +134,7 @@ export default function AdminDashboard(props: AdminDashboardProps) {
         )}
       </WorkspaceShell>
       <AccountDialog directory={directory} />
+      {profileOpen && <AdminProfile account={props.account} onClose={() => setProfileOpen(false)} onPassword={props.onPassword} />}
     </>
   );
 }

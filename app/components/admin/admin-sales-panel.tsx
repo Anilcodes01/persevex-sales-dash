@@ -11,9 +11,13 @@ import type { SalesPage } from "../sales/types";
 
 export function AdminSalesPanel({
   account,
+  title = "Sales",
+  showHeading = true,
   onSessionExpired,
 }: {
   account: Account;
+  title?: string;
+  showHeading?: boolean;
   onSessionExpired: () => void;
 }) {
   const [filters, setFilters] = useState(() => ({
@@ -35,15 +39,15 @@ export function AdminSalesPanel({
   }
   return (
     <div className="sales-workspace">
-      <div className="panel-title">
+      {showHeading && <div className="panel-title">
         <div>
-          <h1>Sales</h1>
+          <h1>{title}</h1>
           <p>
             Sales from everyone, including Team Leads. Dates follow India
             Standard Time.
           </p>
         </div>
-      </div>
+      </div>}
       <section
         className="roster-panel admin-sales-filters"
         aria-label="Sales filters"
@@ -98,7 +102,7 @@ export function AdminSalesPanel({
             setFilters({ ...monthDates(), teamId: "", employeeId: "" })
           }
         >
-          Reset to current month
+          Current month
         </Button>
       </section>
       <SalesPanel

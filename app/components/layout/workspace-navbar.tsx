@@ -1,3 +1,4 @@
+import { SalesSoundControl } from "../sounds/sales-sound-control";
 import { MobileAccountPanel } from "./mobile-account-panel";
 import { Brand } from "./brand";
 import type { ReactNode } from "react";
@@ -20,6 +21,7 @@ export function WorkspaceNavbar({
       </div>
       <div className="navbar-actions">
         {action}
+        {(accountProps.account.role === "admin" || accountProps.account.jobRole === "team_lead") && <SalesSoundControl accountId={accountProps.account.id} />}
         <div className="desktop-account-menu"><AccountMenu {...accountProps} /></div>
         <MobileAccountPanel {...accountProps} />
       </div>

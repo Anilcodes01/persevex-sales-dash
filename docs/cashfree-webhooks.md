@@ -159,3 +159,7 @@ control; do not infer it from pending/failed payment statuses or analytics total
 Sources checked:
 - https://www.cashfree.com/docs/payments/no-code/payment-forms/webhooks
 - https://www.cashfree.com/docs/payments/checkout/after/external-analytics
+
+## Admin history
+
+Admin → History → Payments lists stored notifications with time, payer name/email/phone, amount and payment ID. This authenticated admin view shows full contact details; TV continues to mask them. Date filters default to the current IST month, with inclusive end date, 25 rows per page and live refresh. Records are limited to the configured CASHFREE_ENV. A note identifies when the selected period includes unsigned/unverified notifications. This shows notifications received by this app, not a Cashfree historical import. History → Employee sales reuses the full sales table and its team/employee/date filters, independently of payment records.

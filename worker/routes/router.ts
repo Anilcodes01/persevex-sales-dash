@@ -1,3 +1,5 @@
+import { clearDevelopmentData } from "./clear-development-data";
+import { paymentHistory } from "./payment-history";
 import { avatarRequest } from "./avatars";
 import { resetEmployeeSales } from "./reset-sales";
 import type { Env } from "../types";
@@ -95,6 +97,10 @@ export async function routeOrganisationRequest(
     requireAdministrator(store.accountForSession(tokenHash));
     return listTeams(store);
   }
+  if (path === "/api/admin/payments" && request.method === "GET") {
+    requireAdministrator(store.accountForSession(tokenHash));
+    return paymentHistory(store, env, new URL(request.url));
+  }
   if (path === "/api/admin/sales" && request.method === "GET") {
     requireAdministrator(store.accountForSession(tokenHash));
     return listAdminSales(store, new URL(request.url));
@@ -151,6 +157,8 @@ export async function routeOrganisationRequest(
   requireAdministrator(actor);
 
   switch (path) {
+    case "/api/admin/clear-development-data":
+      return clearDevelopmentData(body, actor, tokenHash, store, env);
     case "/api/admin/accounts/reset-sales":
       return resetEmployeeSales(body, actor, store);
     case "/api/admin/teams/delete":

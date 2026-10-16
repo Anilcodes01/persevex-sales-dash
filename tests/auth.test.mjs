@@ -218,7 +218,8 @@ test('live sale events are post-commit, scoped, versioned, and recoverable after
   const payload={submissionId:crypto.randomUUID(),studentName:'Private Student',phone:'9876543210',amount:'100.50',overallAmount:'2000',domain:'Finance',note:'Private note',teamId:team};
   const response=await f.request('/api/employee/sales',payload,seller.cookie);
   assert.equal(response.status,201);const sale=(await response.json()).sale;
-  for(const socket of [adminSocket,leadSocket,sellerSocket]) assert.deepEqual(socket.messages,[{type:'sales_changed',version:1}]);
+  for(const socket of [adminSocket,leadSocket]) assert.deepEqual(socket.messages,[{type:'sales_changed',version:1,notification:'sale_submitted'}]);
+  assert.deepEqual(sellerSocket.messages,[{type:'sales_changed',version:1}]);
   assert.deepEqual(otherSocket.messages,[]);
   assert.ok(!JSON.stringify(adminSocket.messages).includes('Private'));
   await f.request('/api/employee/sales',payload,seller.cookie);
@@ -234,7 +235,7 @@ test('live sale events are post-commit, scoped, versioned, and recoverable after
   const oldCount=leadSocket.messages.length;
   await f.request('/api/employee/sales',{...payload,submissionId:crypto.randomUUID()},seller.cookie);
   assert.equal(leadSocket.messages.length,oldCount);
-  assert.deepEqual(otherSocket.messages.at(-1),{type:'sales_changed',version:3});
+  assert.deepEqual(otherSocket.messages.at(-1),{type:'sales_changed',version:3,notification:'sale_submitted'});
   await f.request('/api/auth/logout',{},seller.cookie);
   assert.equal(sellerSocket.closeCode,4401);
   await f.request('/api/admin/accounts/disable',{accountId:other.id},adminCookie);
@@ -644,7 +645,7 @@ test('Cashfree accepts signed successes once, masks TV data and notifies only au
   assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM cashfree_payments').get().n,1);
   assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM sales').get().n,0);
   assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM collection_events').get().n,0);
-  assert.deepEqual(adminSocket.messages,[{type:'payments_changed',version:1}]);
+  assert.deepEqual(adminSocket.messages,[{type:'payments_changed',version:1,notification:'payment_received'}]);
   assert.deepEqual(employeeSocket.messages,[]);
   const duplicate=await paymentWebhook(f,payload,{timestamp:'1700000000000'});
   assert.equal(duplicate.status,200);assert.equal((await duplicate.json()).duplicate,true);
@@ -859,4 +860,58 @@ test('private avatars enforce ownership, validate PNGs and replace R2 objects', 
   assert.equal((await send(Buffer.alloc(256*1024+1))).status,413);
   assert.equal((await send(undefined,cookie,'&remove=true')).status,200); assert.equal(objects.size,0);
   assert.equal((await f.request(path,undefined,cookie)).status,404);
+});
+
+test('admin payment history paginates, isolates environments and uses inclusive IST dates', async () => {
+  const f=fixture(); const cookie=await initialise(f); f.env.CASHFREE_ENV='production';
+  const insert=f.db.prepare('INSERT INTO cashfree_payments VALUES (?,?,?,?,?,?,?,?,?,?,?,?)');
+  for(let i=0;i<26;i++) insert.run('production','history-'+String(i).padStart(2,'0'),'order',10000,'INR',Date.parse('2026-10-01T00:00:00+05:30')+i,'Payer','payer@example.test','9876543210','fingerprint',Date.now(),0);
+  insert.run('sandbox','excluded','order',10000,'INR',Date.parse('2026-10-01T00:00:00+05:30'),'Sandbox','','','fingerprint',Date.now(),1);
+  insert.run('production','next-month','order',10000,'INR',Date.parse('2026-11-01T00:00:00+05:30'),'Next month','','','fingerprint',Date.now(),1);
+  const path='/api/admin/payments?from=2026-10-01&to=2026-10-31';
+  assert.equal((await f.request(path)).status,401);
+  const first=await (await f.request(path,undefined,cookie)).json();
+  assert.equal(first.total,26); assert.equal(first.payments.length,25); assert.equal(first.amountPaise,260000); assert.equal(first.unverified,26);
+  assert.equal(first.payments[0].email,'payer@example.test');
+  const second=await (await f.request(path+'&page=2',undefined,cookie)).json();
+  assert.equal(second.payments.length,1); assert.equal(second.payments[0].paymentId,'history-00');
+  assert.equal((await f.request(path+'&page=-1',undefined,cookie)).status,400);
+  const created=await f.request('/api/admin/accounts',{email:'history-employee@example.test',displayName:'Employee',role:'employee',password},cookie);
+  const employee=(await created.json()).account;
+  const login=await f.request('/api/auth/login',{email:employee.email,password});
+  assert.equal((await f.request(path,undefined,login.headers.get('set-cookie').split(';')[0])).status,403);
+});
+
+test('profile reset keeps only the acting admin and preserves Cashfree payments', async () => {
+  const f=fixture(); const cookie=await initialise(f);
+  const actor=(await (await f.request('/api/auth/me',undefined,cookie)).json()).account;
+  const created=await f.request('/api/admin/accounts',{email:'clear-user@example.test',displayName:'User',role:'employee',password},cookie);
+  const employee=(await created.json()).account;
+  const login=await f.request('/api/auth/login',{email:employee.email,password}); const employeeCookie=login.headers.get('set-cookie').split(';')[0];
+  await f.request('/api/admin/accounts',{email:'other-admin@example.test',displayName:'Other admin',role:'admin',password},cookie);
+  f.db.exec('PRAGMA foreign_keys=ON');
+  const teamId=(await (await f.request('/api/admin/teams/save',{name:'Clear team',managerId:''},cookie)).json()).teamId;
+  await f.request('/api/admin/teams/assign',{accountId:employee.id,teamId},cookie);
+  await f.request('/api/employee/sales',{submissionId:crypto.randomUUID(),studentName:'Student',phone:'9876543210',amount:'100',overallAmount:'500',domain:'Finance',teamId},employeeCookie);
+  const insert=f.db.prepare('INSERT INTO cashfree_payments VALUES (?,?,?,?,?,?,?,?,?,?,?,?)');
+  for(const environment of ['production','sandbox']) insert.run(environment,'keep-payment','order',12345,'INR',Date.now(),'Payer','','','fingerprint',Date.now(),0);
+  const before=f.db.prepare('SELECT * FROM cashfree_payments ORDER BY environment').all();
+  const removed=[];
+  f.env.AVATARS={async list(){ return {objects:[{key:'avatars/old.png',uploaded:new Date(0)}],truncated:false}; },async delete(keys){removed.push(...keys);} };
+  const route='/api/admin/clear-development-data';
+  assert.equal((await f.request(route,{confirm:'CLEAR DEVELOPMENT DATA'},employeeCookie)).status,403);
+  assert.equal((await f.request(route,{confirm:'wrong'},cookie)).status,400);
+  f.db.exec("CREATE TRIGGER fail_clear BEFORE DELETE ON accounts BEGIN SELECT RAISE(ABORT,'simulated failure'); END");
+  assert.equal((await f.request(route,{confirm:'CLEAR DEVELOPMENT DATA'},cookie)).status,503);
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM sales').get().n,1);
+  f.db.exec('DROP TRIGGER fail_clear');
+  const result=await f.request(route,{confirm:'CLEAR DEVELOPMENT DATA'},cookie);
+  assert.equal(result.status,200); assert.equal((await result.json()).preservedPayments,2);
+  assert.deepEqual(f.db.prepare('SELECT id FROM accounts').all().map(a=>a.id),[actor.id]);
+  for(const table of ['sales','teams','team_memberships','account_avatars']) assert.equal(f.db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n,0);
+  assert.deepEqual(f.db.prepare('SELECT * FROM cashfree_payments ORDER BY environment').all(),before);
+  assert.equal((await f.request('/api/auth/me',undefined,cookie)).status,200);
+  assert.equal((await f.request('/api/auth/me',undefined,employeeCookie)).status,401);
+  assert.deepEqual(removed,['avatars/old.png']);
+  assert.deepEqual(f.db.prepare('PRAGMA foreign_key_check').all(),[]);
 });

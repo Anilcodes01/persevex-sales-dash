@@ -123,3 +123,11 @@ employee submissions and leaderboard/target credit.
 ### Administrator sales reset
 
 In People, use a person’s three-dot menu → Reset sales. Choose inclusive IST dates and confirm. All existing pending or approved sales in that range become rejected with an administrator reset reason; original student details, amounts, submission IDs and collection events remain in history. Approved totals, target progress and TV rankings update through the existing live notifications. Already rejected sales stay unchanged. New submissions after the reset count normally. The action is admin-only and audited per sale; reset records cannot be approved again through the review endpoint.
+
+### Live notification sounds
+
+Admin and Team Lead navbars have an Enable sale sounds / Mute sale sounds icon and volume control. TV has the same control next to fullscreen. Sound starts muted on each page load and must be enabled by a click for browser audio permission. Default volume is 25%.
+
+A newly committed employee/Team Lead submission emits `sale_submitted` to connected administrators and relevant Team Leads. It uses `/sounds/mixkit-software-interface-back-2575.wav`, even while pending. Reviews, resets and target edits do not emit this notification. New Cashfree payment inserts emit `payment_received` to administrators, using `/sounds/mixkit-page-forward-single-chime-1107.wav`; retries and verification upgrades do not sound. TV listens as the signed-in administrator. No sound is generated from ranking changes or data refresh comparisons.
+
+Audio uses a bounded sequential Web Audio queue; clips do not overlap. Live ready/sync messages establish the current version without audio. Each sound listener deduplicates event versions and never fetches historical notifications on reconnect. Muting clears queued audio and stops playback. Each browser tab controls its own sound independently.

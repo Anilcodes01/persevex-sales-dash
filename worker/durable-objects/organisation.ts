@@ -114,7 +114,7 @@ export class Organisation extends DurableObject<Env> {
     const result = await recordPayment(payment, this.authStore);
     if (!result.duplicate) {
       try {
-        this.salesLive.publishPayments(result.version);
+        this.salesLive.publishPayments(result.version, result.inserted === true);
       } catch {
         // A failed notification must not fail a durably committed payment.
         for (const socket of this.ctx.getWebSockets()) {
@@ -152,6 +152,7 @@ export class Organisation extends DurableObject<Env> {
         response.ok &&
         request.method === "POST" &&
         [
+          "/api/admin/clear-development-data",
           "/api/auth/logout",
           "/api/auth/login",
           "/api/auth/password",

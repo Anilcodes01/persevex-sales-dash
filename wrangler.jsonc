@@ -3,7 +3,8 @@
 	"name": "persevex-sales-dash",
 	"main": "worker/index.ts",
 	"vars": {
-		"CASHFREE_ALLOW_UNSIGNED": "true"
+		"CASHFREE_ALLOW_UNSIGNED": "true",
+		"CASHFREE_ENV": "production"
 	},
 	"compatibility_date": "2026-10-12",
 	"assets": {

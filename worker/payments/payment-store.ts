@@ -52,7 +52,7 @@ export async function recordPayment(
         payment.environment,
         payment.paymentId,
       );
-      return { duplicate: false, version: advanceSalesVersion(store) };
+      return { duplicate: false, inserted: false, version: advanceSalesVersion(store) };
     }
     if (existing) {
       if (existing.fingerprint !== fingerprint)
@@ -77,7 +77,7 @@ export async function recordPayment(
       Date.now(),
       payment.verified ? 1 : 0,
     );
-    return { duplicate: false, version: advanceSalesVersion(store) };
+    return { duplicate: false, inserted: true, version: advanceSalesVersion(store) };
   });
 }
 export function recentPayments(

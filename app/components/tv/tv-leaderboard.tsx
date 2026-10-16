@@ -7,6 +7,7 @@ import "./tv.css";
 
 import { Rankings, type Standing } from "./rankings";
 import { CashfreePayments, type PaymentRow } from "./cashfree-payments";
+import { SalesSoundControl } from "../sounds/sales-sound-control";
 import { FullscreenButton } from "./fullscreen-button";
 type Board = {
   payments: PaymentRow[];
@@ -85,6 +86,7 @@ export function TvLeaderboard({
   return (
     <main className="tv-display">
       <FullscreenButton />
+      <SalesSoundControl key={account.id} accountId={account.id} floating />
       <Rankings
         key={`${view}:${data?.period.from ?? "loading"}`}
         title="Sales performance"

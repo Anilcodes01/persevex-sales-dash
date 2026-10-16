@@ -9,7 +9,9 @@ export function useSalesLive({
   onAccessChanged,
   onConnected,
   onSessionExpired,
+  onNotification,
 }: {
+  onNotification?: (kind: "sale_submitted" | "payment_received", version: number) => void;
   accountId: string;
   refresh: () => Promise<boolean>;
   onAccessChanged: () => void;
@@ -17,6 +19,7 @@ export function useSalesLive({
   onSessionExpired: () => void;
 }) {
   const callbacks = useRef({
+    onNotification,
     refresh,
     onAccessChanged,
     onConnected,
@@ -24,12 +27,13 @@ export function useSalesLive({
   });
   useEffect(() => {
     callbacks.current = {
+      onNotification,
       refresh,
       onAccessChanged,
       onConnected,
       onSessionExpired,
     };
-  }, [refresh, onAccessChanged, onConnected, onSessionExpired]);
+  }, [refresh, onAccessChanged, onConnected, onSessionExpired, onNotification]);
   const [state, setState] = useState<LiveState>("Connecting");
   const [lastSync, setLastSync] = useState<number | null>(null);
   useEffect(() => {
@@ -126,6 +130,8 @@ export function useSalesLive({
           if (message.version <= version) return;
           // Versions are global; gaps can be changes outside this account's scope.
           version = message.version;
+          if (message.notification === "sale_submitted" || message.notification === "payment_received")
+            callbacks.current.onNotification?.(message.notification, message.version);
           scheduleSync();
         } else if (message.type === "access_changed") {
           version = message.version;

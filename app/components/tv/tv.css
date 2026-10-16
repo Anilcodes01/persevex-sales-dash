@@ -390,3 +390,6 @@
 .tv-rank-badge-edge { transform-origin: 50px 50px; animation: tv-badge-spin 16s linear infinite; }
 @keyframes tv-badge-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .tv-rank-badge-edge { animation: none; } }
+
+.tv-sound-control { position: fixed; bottom: 20px; right: 80px; z-index: 40; display: flex; align-items: center; gap: 8px; background: var(--background); padding: 4px; border: 1px solid var(--border); }
+.tv-sound-control input[type="range"] { width: 72px; accent-color: var(--primary); }

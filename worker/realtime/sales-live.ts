@@ -7,6 +7,7 @@ export type SaleChange = {
   employeeId: string;
   teamId: string;
   version: number;
+  submitted?: boolean;
 };
 type Attachment = {
   tokenHash: string;
@@ -112,7 +113,8 @@ export class SalesLive {
       for (const socket of this.ctx.getWebSockets(`account:${id}`)) {
         const actor = this.valid(socket);
         if (actor)
-          this.send(socket, { type: "sales_changed", version: change.version });
+          this.send(socket, { type: "sales_changed", version: change.version,
+            ...(change.submitted && (actor.role === "admin" || actor.job_role === "team_lead") ? { notification: "sale_submitted" } : {}) });
       }
   }
   refreshAccess() {
@@ -127,7 +129,7 @@ export class SalesLive {
       }
     }
   }
-  publishPayments(version: number) {
+  publishPayments(version: number, notify = true) {
     const admins = this.store.storage.sql
       .exec<{ id: string }>(
         "SELECT id FROM accounts WHERE role='admin' AND active=1",
@@ -137,7 +139,7 @@ export class SalesLive {
       for (const socket of this.ctx.getWebSockets(`account:${admin.id}`)) {
         const actor = this.valid(socket);
         if (actor?.role === "admin")
-          this.send(socket, { type: "payments_changed", version });
+          this.send(socket, { type: "payments_changed", version, ...(notify ? { notification: "payment_received" } : {}) });
       }
   }
   async scheduleExpiry() {
