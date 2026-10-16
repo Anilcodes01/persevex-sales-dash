@@ -2,6 +2,7 @@ import type { Organisation } from "./durable-objects/organisation";
 
 export interface Env {
   ASSETS: Fetcher;
+  AVATARS?: R2Bucket;
   ORGANISATION: DurableObjectNamespace<Organisation>;
   BOOTSTRAP_ADMIN_SECRET?: string;
   LOCAL_DEVELOPMENT?: string;

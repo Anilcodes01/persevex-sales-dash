@@ -1,5 +1,5 @@
 "use client";
-import { User } from "lucide-react";
+import { EmployeeAvatar } from "../avatars/employee-avatar";
 
 import {
   Table,
@@ -43,9 +43,7 @@ export function PeopleTable({
             <TableRow key={person.id}>
               <TableCell>
                 <div className="person-cell">
-                  <span className="">
-                    <User className="" />
-                  </span>
+                  <EmployeeAvatar accountId={person.id} name={person.displayName} />
                   <div>
                     <strong>
                       {person.displayName}

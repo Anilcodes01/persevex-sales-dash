@@ -1681,3 +1681,69 @@ select {
   .target-date-fields { grid-template-columns: 1fr; }
   .target-period-help { flex-direction: column; gap: 8px; }
 }
+
+.employee-avatar-image { display: inline-flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; width: 40px; height: 40px; background: var(--accent); color: var(--accent-foreground); }
+.employee-avatar-image img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-editor-form { display: grid; gap: 16px; }
+.avatar-editor-form label { margin-bottom: 0; }
+.avatar-upload-preview { width: 128px; height: 128px; object-fit: cover; margin: 0 auto; border-radius: 50% !important; }
+
+.avatar-upload-control { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 8px 0 24px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+.avatar-upload-control .avatar-upload-circle { position: relative; width: 112px; height: 112px; padding: 0; border: 1px dashed var(--primary); border-radius: 50% !important; background: var(--accent); }
+.avatar-upload-circle .employee-avatar-image, .avatar-upload-circle canvas { width: 110px; height: 110px; border-radius: 50% !important; font-size: 32px; }
+.avatar-camera-badge { position: absolute; right: 0; bottom: 0; width: 30px; height: 30px; display: grid; place-items: center; border: 2px solid var(--background); border-radius: 50% !important; background: var(--primary); color: var(--primary-foreground); }
+.avatar-upload-caption { text-align: center; }
+.avatar-upload-caption p, .avatar-crop-controls p, .avatar-upload-control small { color: var(--muted-foreground); font-size: 13px; line-height: 1.5; }
+.avatar-crop-controls { width: 100%; display: grid; gap: 14px; padding: 16px; background: var(--muted); }
+.avatar-crop-controls label { display: grid; gap: 8px; margin: 0; font-size: 13px; }
+.avatar-crop-controls input[type="range"] { width: 100%; height: 24px; margin: 0; padding: 0; accent-color: var(--primary); border: 0; background: transparent; }
+.avatar-crop-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.profile-avatar-section { padding: 16px 24px 0; }
+
+.account-dialog.edit-account-dialog { width: min(600px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; overflow: hidden; }
+.edit-account-dialog .dialog-header { padding: 18px 48px 16px 24px; flex-shrink: 0; }
+.edit-account-dialog .account-form { overflow-y: auto; padding: 18px 24px 0; }
+.edit-account-dialog .account-form > label { margin-bottom: 12px; }
+.edit-account-dialog .avatar-upload-control { display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 8px 14px; padding: 0 0 14px; margin-bottom: 16px; }
+.edit-account-dialog .avatar-upload-circle { width: 64px; height: 64px; grid-column: 1; grid-row: 1 / 3; }
+.edit-account-dialog .avatar-upload-circle .employee-avatar-image,
+.edit-account-dialog .avatar-upload-circle canvas { width: 62px; height: 62px; font-size: 22px; }
+.edit-account-dialog .avatar-camera-badge { width: 24px; height: 24px; }
+.edit-account-dialog .avatar-camera-badge svg { width: 14px; height: 14px; }
+.edit-account-dialog .avatar-upload-caption { text-align: left; grid-column: 2; }
+.edit-account-dialog .avatar-upload-caption p { font-size: 12px; }
+.edit-account-dialog .avatar-upload-control > small { grid-column: 2 / -1; font-size: 11px; }
+.edit-account-dialog .avatar-upload-control > button:not(.avatar-upload-circle) { grid-column: 3; grid-row: 1; padding: 6px 8px; font-size: 12px; }
+.edit-account-dialog .avatar-crop-controls { grid-column: 1 / -1; padding: 12px; gap: 8px; }
+.edit-account-dialog .avatar-crop-controls label { margin: 0; }
+.edit-account-dialog .account-form > .dialog-footer { position: sticky; bottom: 0; z-index: 1; background: var(--background); border-top: 1px solid var(--border); padding: 14px 0; margin-top: 14px; display: flex; justify-content: flex-end; gap: 10px; }
+@media (max-width: 480px) {
+  .edit-account-dialog .dialog-header { padding-left: 18px; }
+  .edit-account-dialog .account-form { padding-inline: 18px; }
+  .edit-account-dialog .avatar-upload-control { grid-template-columns: 56px 1fr; gap: 8px 12px; }
+  .edit-account-dialog .avatar-upload-circle { width: 56px; height: 56px; }
+  .edit-account-dialog .avatar-upload-circle .employee-avatar-image,
+  .edit-account-dialog .avatar-upload-circle canvas { width: 54px; height: 54px; }
+  .edit-account-dialog .avatar-upload-control > button:not(.avatar-upload-circle) { grid-column: 2; grid-row: auto; justify-self: start; }
+}
+
+.avatar-library-cropper { display: flex; justify-content: center; min-width: 0; overflow: hidden; }
+.avatar-library-cropper .ReactCrop { max-width: 100%; }
+.avatar-library-cropper .ReactCrop__child-wrapper > img { display: block; width: auto; height: auto; max-width: 100%; max-height: 240px; object-fit: contain; }
+.avatar-library-cropper .ReactCrop--circular-crop .ReactCrop__crop-selection { border-radius: 50% !important; }
+
+.account-dialog.avatar-crop-dialog { width: min(600px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); }
+.avatar-crop-dialog .avatar-crop-controls { padding: 20px 24px; background: var(--background); gap: 16px; }
+.avatar-crop-dialog .avatar-library-cropper .ReactCrop__child-wrapper > img { max-height: min(400px, 48dvh); }
+.avatar-crop-dialog .avatar-crop-actions { border-top: 1px solid var(--border); padding-top: 16px; }
+
+.employee-avatar-image, .employee-avatar-image img { border-radius: 50% !important; }
+.employee-avatar-image img { display: block; }
+.avatar-upload-control .avatar-upload-circle { display: block; flex-shrink: 0; line-height: 0; overflow: visible; }
+.avatar-upload-circle .avatar-upload-photo { position: absolute; inset: 1px; line-height: 0; }
+.avatar-upload-circle .avatar-upload-photo .employee-avatar-image { display: flex; width: 100%; height: 100%; border: 0; margin: 0; }
+.avatar-upload-circle canvas { position: absolute; inset: 1px; display: block; width: calc(100% - 2px) !important; height: calc(100% - 2px) !important; }
+.avatar-upload-circle .avatar-upload-photo[hidden], .avatar-upload-circle canvas[hidden] { display: none; }
+.avatar-upload-circle .avatar-camera-badge { right: -2px; bottom: -2px; z-index: 1; padding: 0; margin: 0; line-height: 1; }
+.avatar-upload-circle .avatar-camera-badge svg { display: block; flex-shrink: 0; }
+.edit-account-dialog .avatar-upload-caption { min-width: 0; align-self: center; }

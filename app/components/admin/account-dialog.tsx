@@ -1,4 +1,5 @@
 "use client";
+import { AvatarUpload } from "../avatars/avatar-upload";
 import { useState } from "react";
 import { monthDates } from "../../../shared/targets";
 import { DatePicker } from "../forms/date-picker";
@@ -16,6 +17,7 @@ export function AccountDialog({ directory }: { directory: PeopleDirectory }) {
   if (!selection) return null;
   return (
     <WorkspaceDialog
+      className={selection.action === "edit" ? "edit-account-dialog" : ""}
       locked={busy}
       title={ACCOUNT_ACTION_TITLES[selection.action]}
       description="Manage this account’s details and access."
@@ -24,6 +26,7 @@ export function AccountDialog({ directory }: { directory: PeopleDirectory }) {
       }}
     >
       <form onSubmit={mutate} className="account-form">
+        {selection.action === "edit" && selection.account && <AvatarUpload key={selection.account.id} accountId={selection.account.id} name={selection.account.displayName} />}
         {selection.action === "resetSales" && <>
           <p className="notice warning">Reset {selection.account?.displayName}&apos;s sales for these dates? Existing sales will be marked rejected and removed from totals, target progress and rankings. Records stay in history. New sales are unaffected.</p>
           <input type="hidden" name="from" value={resetRange.from} />

@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { COLOR_THEMES } from "../../../shared/color-themes";
 import { useColorTheme } from "../color-theme-provider";
-import { initials } from "../../lib/display";
+import { EmployeeAvatar } from "../avatars/employee-avatar";
 import type { AccountMenuProps } from "./account-menu";
 
 export function MobileAccountPanel({ account, accountLabel, settingsLabel, onSettings, onLogout, signingOut, mobileNavigation }: AccountMenuProps) {
@@ -21,10 +21,11 @@ export function MobileAccountPanel({ account, accountLabel, settingsLabel, onSet
   }, []);
   function navigate(action: () => void) { setOpen(false); action(); }
   return (
+    <>
     <Sheet.Root open={open} onOpenChange={setOpen}>
       <Sheet.Trigger asChild>
         <Button variant="ghost" className="navbar-account mobile-account-trigger" aria-label={`Open navigation for ${account.displayName}`}>
-          <span className="avatar">{initials(account.displayName)}</span>
+          <EmployeeAvatar accountId={account.id} name={account.displayName} />
         </Button>
       </Sheet.Trigger>
       <Sheet.Portal>
@@ -60,5 +61,6 @@ export function MobileAccountPanel({ account, accountLabel, settingsLabel, onSet
         </Sheet.Content>
       </Sheet.Portal>
     </Sheet.Root>
+    </>
   );
 }

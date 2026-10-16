@@ -1,3 +1,4 @@
+import { avatarRequest } from "./avatars";
 import { resetEmployeeSales } from "./reset-sales";
 import type { Env } from "../types";
 import { AuthStore } from "../storage/auth-store";
@@ -29,6 +30,12 @@ export async function routeOrganisationRequest(
   const path = new URL(request.url).pathname;
   const rawToken = readSession(request);
   const tokenHash = rawToken ? await digest(rawToken) : "";
+
+  if (path === "/api/employee/avatar") {
+    const actor = store.accountForSession(tokenHash);
+    if (actor.must_change_password) throw new HttpError(403, "Change your password first");
+    return avatarRequest(request, actor, store, env);
+  }
 
   if (path === "/api/auth/me" && request.method === "GET") {
     return json({ account: publicAccount(store.accountForSession(tokenHash)) });

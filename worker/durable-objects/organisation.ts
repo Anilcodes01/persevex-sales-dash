@@ -33,6 +33,7 @@ export class Organisation extends DurableObject<Env> {
         "1",
       );
       for (const statement of AUTH_SCHEMA) ctx.storage.sql.exec(statement);
+      ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS account_avatars (account_id TEXT PRIMARY KEY REFERENCES accounts(id), object_key TEXT NOT NULL)");
       for (const statement of TEAM_SCHEMA) ctx.storage.sql.exec(statement);
       const columns = ctx.storage.sql
         .exec<{ name: string }>("PRAGMA table_info(accounts)")

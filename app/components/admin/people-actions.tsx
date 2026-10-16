@@ -20,6 +20,7 @@ export function PeopleActions({
   open: (action: Action, person?: RosterAccount) => void;
 }) {
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
@@ -55,5 +56,6 @@ export function PeopleActions({
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+import { AvatarUpload } from "../avatars/avatar-upload";
 import { jobRoleLabel, accessLabel } from "../../../shared/roles";
 import type { Account } from "../../lib/api";
 export function AccountSettings({ account }: { account: Account }) {
@@ -14,6 +15,7 @@ export function AccountSettings({ account }: { account: Account }) {
             <p>Account details managed by your administrator.</p>
           </div>
         </div>
+        <div className="profile-avatar-section"><AvatarUpload key={account.id} accountId={account.id} name={account.displayName} /></div>
         <dl className="profile-details">
           <div>
             <dt>Job role</dt>

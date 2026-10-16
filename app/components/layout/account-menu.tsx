@@ -1,4 +1,5 @@
 "use client";
+import { EmployeeAvatar } from "../avatars/employee-avatar";
 import { COLOR_THEMES } from "../../../shared/color-themes";
 import { useColorTheme } from "../color-theme-provider";
 import { useTheme } from "next-themes";
@@ -22,7 +23,7 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import type { Account } from "../../lib/api";
-import { initials } from "../../lib/display";
+
 import type { WorkspaceSidebarProps } from "./workspace-sidebar";
 export type AccountMenuProps = {
   account: Account;
@@ -45,6 +46,7 @@ export function AccountMenu({
   const { theme, setTheme } = useTheme();
   const { colorTheme, setColorTheme } = useColorTheme();
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
@@ -52,7 +54,7 @@ export function AccountMenu({
           className="navbar-account"
           aria-label={`Open account menu for ${account.displayName}`}
         >
-          <span className="avatar">{initials(account.displayName)}</span>
+          <EmployeeAvatar accountId={account.id} name={account.displayName} />
           <span className="navbar-account-name">{account.displayName}</span>
           <ChevronDown size={16} />
         </Button>
@@ -134,5 +136,6 @@ export function AccountMenu({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    </>
   );
 }

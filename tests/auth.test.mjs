@@ -827,3 +827,36 @@ test('admin custom-period sales reset preserves records and clears approved prog
   assert.equal(progress.performance.approvedCount, 0);
   assert.equal(progress.targets[0].targetCount, 30);
 });
+
+test('private avatars enforce ownership, validate PNGs and replace R2 objects', async () => {
+  const { deflateSync } = await import('node:zlib');
+  function chunk(type, data) {
+    const kind=Buffer.from(type); const payload=Buffer.concat([kind,data]); let crc=0xffffffff;
+    for(const byte of payload) { crc^=byte; for(let bit=0;bit<8;bit++) crc=(crc>>>1)^((crc&1)?0xedb88320:0); }
+    const result=Buffer.alloc(data.length+12); result.writeUInt32BE(data.length); payload.copy(result,4); result.writeUInt32BE((crc^0xffffffff)>>>0,result.length-4); return result;
+  }
+  const header=Buffer.alloc(13); header.writeUInt32BE(256); header.writeUInt32BE(256,4); header[8]=8; header[9]=6;
+  const image=Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',header),chunk('IDAT',deflateSync(Buffer.alloc(256*(256*4+1)))),chunk('IEND',Buffer.alloc(0))]);
+  const f=fixture(); const cookie=await initialise(f);
+  const user=(await (await f.request('/api/admin/accounts',{email:'avatar@example.test',displayName:'Avatar',role:'employee',password},cookie)).json()).account;
+  const login=await f.request('/api/auth/login',{email:user.email,password}); const employeeCookie=login.headers.get('set-cookie').split(';')[0];
+  const objects=new Map();
+  f.env.AVATARS={ async put(key,bytes) { objects.set(key,bytes); }, async delete(key) { objects.delete(key); }, async get(key) { const bytes=objects.get(key); return bytes ? { body:new Response(bytes).body,httpEtag:'"test-etag"' } : null; } };
+  const path=`/api/employee/avatar?accountId=${user.id}`;
+  const send=(body,session=cookie,extra='') => worker.fetch(new Request('https://example.test'+path+extra,{method:'POST',headers:{Origin:'https://example.test',Cookie:session,'Content-Type':'image/png'},body}),f.env);
+  assert.equal((await f.request(path)).status,401);
+  assert.equal((await send(Buffer.from('<svg/>'))).status,400);
+  assert.equal((await send(image,employeeCookie)).status,200);
+  assert.equal(objects.size,1);
+  const read=await f.request(path,undefined,cookie); assert.equal(read.status,200); assert.equal(read.headers.get('Content-Type'),'image/png'); assert.equal(read.headers.get('Cache-Control'),'private, no-cache');
+  assert.deepEqual(Buffer.from(await read.arrayBuffer()),image);
+  const admin=(await (await f.request('/api/auth/me',undefined,cookie)).json()).account;
+  const denied=await worker.fetch(new Request('https://example.test/api/employee/avatar?accountId='+admin.id,{method:'POST',headers:{Origin:'https://example.test',Cookie:employeeCookie,'Content-Type':'image/png'},body:image}),f.env);
+  assert.equal(denied.status,403);
+  assert.equal((await send(image)).status,200); assert.equal(objects.size,1);
+  const corrupt=Buffer.from(image); corrupt[corrupt.length-1]^=1;
+  assert.equal((await send(corrupt)).status,400); assert.equal(objects.size,1);
+  assert.equal((await send(Buffer.alloc(256*1024+1))).status,413);
+  assert.equal((await send(undefined,cookie,'&remove=true')).status,200); assert.equal(objects.size,0);
+  assert.equal((await f.request(path,undefined,cookie)).status,404);
+});

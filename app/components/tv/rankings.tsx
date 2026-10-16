@@ -1,6 +1,8 @@
 "use client";
 import { useLayoutEffect, useRef, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, Trophy } from "lucide-react";
+import { RankBadge } from "./rank-badge";
+import { EmployeeAvatar } from "../avatars/employee-avatar";
+import { ArrowDown, ArrowUp } from "lucide-react";
 
 export type Standing = {
   id: string;
@@ -17,23 +19,25 @@ export function Rankings({
   rows,
   cycle,
   controls,
-  status,
+  showAvatars = false,
 }: {
   title: string;
   rows: Standing[];
   cycle: number;
   controls?: ReactNode;
-  status?: string;
+  showAvatars?: boolean;
 }) {
   const list = useRef<HTMLDivElement>(null);
   const previous = useRef<{
     ranks: Map<string, { rank: number; index: number }>;
     tops: Map<string, number>;
+    lefts: Map<string, number>;
     cycle: number;
   } | null>(null);
   const animations = useRef(new Map<string, Animation>());
   const indicators = useRef(new Map<string, ReturnType<typeof setTimeout>>());
-  const pages = Math.max(1, Math.ceil(rows.length / ROWS));
+  const remainingRows = showAvatars ? rows.slice(3) : rows;
+  const pages = Math.max(1, Math.ceil(remainingRows.length / ROWS));
   const page = cycle % pages;
 
   useLayoutEffect(() => {
@@ -42,6 +46,7 @@ export function Rankings({
     );
     const before = previous.current;
     const tops = new Map<string, number>();
+    const lefts = new Map<string, number>();
     const ranks = new Map(
       rows.map((row, index) => [row.id, { rank: row.rank, index }]),
     );
@@ -59,7 +64,10 @@ export function Rankings({
       const offset =
         transform === "none" ? 0 : new DOMMatrixReadOnly(transform).m42;
       running?.cancel();
+      const offsetX = transform === "none" ? 0 : new DOMMatrixReadOnly(transform).m41;
       const top = node.getBoundingClientRect().top;
+      const left = node.getBoundingClientRect().left;
+      lefts.set(id, left);
       tops.set(id, top);
       if (old && old.rank !== next.rank) {
         const direction = old.rank > next.rank ? "up" : "down";
@@ -91,7 +99,8 @@ export function Rankings({
             : old
               ? (old.index - next.index) * node.offsetHeight
               : 0;
-        if (Math.abs(delta) > 1) {
+        const deltaX = before.lefts.has(id) ? before.lefts.get(id)! + offsetX - left : 0;
+        if (Math.abs(delta) > 1 || Math.abs(deltaX) > 1) {
           const bounded = Math.max(
             -window.innerHeight,
             Math.min(window.innerHeight, delta),
@@ -101,10 +110,10 @@ export function Rankings({
             node.animate(
               [
                 {
-                  transform: `translateY(${bounded}px)`,
+                  transform: `translate(${deltaX}px, ${bounded}px)`,
                   opacity: oldTop === undefined ? 0.3 : 1,
                 },
-                { transform: "translateY(0)", opacity: 1 },
+                { transform: "translate(0, 0)", opacity: 1 },
               ],
               { duration: 850, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
             ),
@@ -123,7 +132,7 @@ export function Rankings({
         clearTimeout(timer);
         indicators.current.delete(id);
       }
-    previous.current = { ranks, tops, cycle };
+    previous.current = { ranks, tops, lefts, cycle };
   }, [rows, cycle]);
 
   useLayoutEffect(() => {
@@ -141,27 +150,35 @@ export function Rankings({
         <h2>{title}</h2>
         {controls}
       </div>
-      <div className="tv-ranking-labels">
-        <span>Rank / Name</span>
-        <span>Target</span>
-        <span>Sales</span>
-        <span>Achieved</span>
-      </div>
       <div className="tv-ranking-tiles" ref={list}>
-        {rows.slice(page * ROWS, (page + 1) * ROWS).map((row) => (
+        {showAvatars && rows.length > 0 && <div className="tv-podium" aria-label="Top three employees">
+          {rows.slice(0, 3).map((row, index) => <div className={`tv-podium-place tv-podium-place-${index + 1}`} key={row.id} data-standing-id={row.id}>
+            <div className="tv-podium-profile">
+              <div className="tv-podium-avatar-wrap">
+                <EmployeeAvatar accountId={row.id} name={row.name} className="tv-podium-avatar" />
+                <RankBadge rank={index + 1} />
+              </div>
+              <strong className="tv-podium-name" title={row.name}>{row.name}</strong>
+              <span className="tv-podium-sales"><strong>{row.salesCount}</strong> sales</span>
+              <span className="tv-rank-movement" role="img"><ArrowUp className="tv-movement-up" aria-hidden="true" /><ArrowDown className="tv-movement-down" aria-hidden="true" /></span>
+            </div>
+            <div className="tv-podium-step">
+              <span className="tv-podium-number" aria-hidden="true">{index + 1}</span>
+              <div className="tv-podium-metrics"><span>Target <strong>{row.targetCount ?? "Not set"}</strong></span><span>Achieved <strong>{row.achievement === null ? "—" : `${Math.round(row.achievement)}%`}</strong></span></div>
+            </div>
+          </div>)}
+        </div>}
+        {remainingRows.length > 0 && <div className="tv-ranking-labels">
+          <span>Name</span><span>Target</span><span>Sales</span><span>Achieved</span>
+        </div>}
+        {remainingRows.slice(page * ROWS, (page + 1) * ROWS).map((row) => (
           <div
             className={`tv-ranking-row ${row.rank === 1 ? "tv-first" : ""}`}
             data-standing-id={row.id}
             key={row.id}
           >
             <div className="tv-person">
-              <span className="tv-rank">
-                {row.rank === 1 ? (
-                  <Trophy aria-label="First place" />
-                ) : (
-                  row.rank
-                )}
-              </span>
+              {showAvatars && <EmployeeAvatar accountId={row.id} name={row.name} className="tv-employee-avatar" />}
               <strong>{row.name}</strong>
               <span className="tv-rank-movement" role="img">
                 <ArrowUp className="tv-movement-up" aria-hidden="true" />
@@ -196,12 +213,6 @@ export function Rankings({
             </div>
           </div>
         ))}
-      </div>
-      <div className="tv-panel-status">
-        <span role="status">{status}</span>
-        <span>
-          {page + 1} / {pages}
-        </span>
       </div>
       {!rows.length && (
         <p className="tv-empty">

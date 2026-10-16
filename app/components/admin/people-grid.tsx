@@ -2,7 +2,7 @@
 import type { RosterAccount } from "../../lib/api";
 import type { Action } from "./types";
 import { jobRoleLabel, accessLabel } from "../../../shared/roles";
-import { initials } from "../../lib/display";
+import { EmployeeAvatar } from "../avatars/employee-avatar";
 import { PeopleActions } from "./people-actions";
 
 export function PeopleGrid({
@@ -25,9 +25,7 @@ export function PeopleGrid({
       {accounts.map((person) => (
         <article className="people-directory-card" key={person.id}>
           <div className="people-card-top">
-            <span className="people-card-avatar" aria-hidden="true">
-              {initials(person.displayName)}
-            </span>
+            <EmployeeAvatar accountId={person.id} name={person.displayName} className="people-card-avatar" />
             <PeopleActions
               person={person}
               currentAccountId={currentAccountId}

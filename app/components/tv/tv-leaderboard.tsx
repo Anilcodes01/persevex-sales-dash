@@ -58,7 +58,7 @@ export function TvLeaderboard({
     setData(null);
     void refresh();
   }, [refresh]);
-  const live = useSalesLive({
+  useSalesLive({
     accountId: account.id,
     refresh,
     onAccessChanged: accessChanged,
@@ -88,6 +88,7 @@ export function TvLeaderboard({
       <Rankings
         key={`${view}:${data?.period.from ?? "loading"}`}
         title="Sales performance"
+        showAvatars={view === "employees"}
         rows={data?.[view] ?? []}
         cycle={cycle}
         controls={
@@ -118,7 +119,6 @@ export function TvLeaderboard({
             </Button>
           </div>
         }
-        status={`${live.state} · Current month · Approved sales · Monthly count targets`}
       />
       <CashfreePayments
         payments={data?.payments ?? []}
