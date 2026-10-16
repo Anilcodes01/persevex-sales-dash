@@ -6,6 +6,9 @@ export interface Env {
   BOOTSTRAP_ADMIN_SECRET?: string;
   LOCAL_DEVELOPMENT?: string;
   DEV_FRONTEND_ORIGIN?: string;
+  CASHFREE_WEBHOOK_SECRET?: string;
+  CASHFREE_ALLOW_UNSIGNED?: string;
+  CASHFREE_ENV?: "sandbox" | "production";
 }
 
 export type Account = {

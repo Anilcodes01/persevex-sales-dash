@@ -22,22 +22,27 @@ export function SearchableSelect({
   options,
   label,
   allLabel,
+  includeAll = true,
+  disabled = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
   label: string;
   allLabel: string;
+  includeAll?: boolean;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open && !disabled} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"
           variant="outline"
           role="combobox"
-          aria-expanded={open}
+          aria-expanded={open && !disabled}
+          disabled={disabled}
           aria-label={label}
           className="workspace-select w-full justify-between font-normal"
         >
@@ -61,7 +66,10 @@ export function SearchableSelect({
           <CommandList className="max-h-60">
             <CommandEmpty>No matches found.</CommandEmpty>
             <CommandGroup>
-              {[{ value: "", label: allLabel }, ...options].map((option) => (
+              {[
+                ...(includeAll ? [{ value: "", label: allLabel }] : []),
+                ...options,
+              ].map((option) => (
                 <CommandItem
                   key={option.value}
                   value={option.value || "__all__"}

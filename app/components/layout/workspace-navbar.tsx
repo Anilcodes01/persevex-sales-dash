@@ -1,3 +1,4 @@
+import { MobileAccountPanel } from "./mobile-account-panel";
 import { Brand } from "./brand";
 import type { ReactNode } from "react";
 import { AccountMenu, type AccountMenuProps } from "./account-menu";
@@ -19,7 +20,8 @@ export function WorkspaceNavbar({
       </div>
       <div className="navbar-actions">
         {action}
-        <AccountMenu {...accountProps} />
+        <div className="desktop-account-menu"><AccountMenu {...accountProps} /></div>
+        <MobileAccountPanel {...accountProps} />
       </div>
     </header>
   );

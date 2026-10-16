@@ -7,7 +7,7 @@ export type Account = {
   mustChangePassword: boolean;
   active: boolean;
 };
-export type RosterAccount = Account & { createdAt: number };
+export type RosterAccount = Account & { createdAt: number; teams?: { id: string; name: string }[] };
 export class ApiError extends Error {
   constructor(
     message: string,

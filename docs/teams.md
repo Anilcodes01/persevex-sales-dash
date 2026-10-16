@@ -1,46 +1,17 @@
-# Teams and assignments
+# Team deletion
 
-Administrators manage teams from the **Teams** sidebar tab. Create employee and
-manager accounts in **People**, then create a team, select its manager and assign
-employees. A team can be created without a manager and configured later.
+Administrators can select a team, choose Delete team, and confirm in the dialog.
+POST `/api/admin/teams/delete` accepts `teamId` with normal admin session and
+same-origin checks. Team Leads/employees cannot delete teams.
 
-An employee belongs to at most one current team. Each team has at most one
-current manager; a manager may oversee several teams. Reassigning an employee
-closes their previous membership and opens a new one, using server timestamps.
-Removing them closes the membership without deleting its history. Manager
-changes preserve the same history. Backdated transfers are not implemented.
+Deletion is an archive: `deleted_teams` stores who deleted it and when. The same
+transaction ends current memberships/Team Lead assignments and writes an audit
+entry. Deleted teams disappear from the active directory, target team filter and
+workspace team count. New assignments and edits against archived IDs fail.
+Historical sales keep their team attribution and remain reportable; admins can
+review pending historical sales. Account targets are retained. Names can be
+reused for new active teams. Repeating deletion does not repeat its audit entry.
 
-Disabling an account preserves its assignments and marks it inactive. Only
-active employee/manager accounts can be newly assigned. Changing an account's
-role closes assignments that no longer match that role. Administrators can
-remove an inactive employee from a team.
-
-## APIs
-
-| Endpoint | Method | Access and fields |
-| --- | --- | --- |
-| `/api/admin/teams` | GET | Admin; teams, current members/managers and eligible accounts |
-| `/api/admin/teams/save` | POST | Admin; name, managerId; optional teamId for editing |
-| `/api/admin/teams/assign` | POST | Admin; accountId, teamId; empty teamId removes assignment |
-| `/api/employee/team` | GET | Employee; their own team and current active manager name |
-
-Team names are unique ignoring case. Employees cannot select another identity
-to inspect or change assignments. Admin mutations enforce server permissions
-and record audit events in the same transaction as their changes.
-
-## Storage and deployment
-
-The additive schema introduces `teams`, `team_memberships`, and
-`manager_assignments`, advancing the application schema version to 3. Existing
-accounts and sessions are preserved. Deploy normally with `npm run cf:deploy`;
-do not change the Durable Object class migration or rerun admin bootstrap.
-
-After deployment, create two teams, assign a manager, move a synthetic employee
-between teams, and inspect the employee dashboard. The membership table should
-retain both records with only the current one having `ends_at = NULL`. Sales
-and manager approval workflows will be built on these assignments next.
-
-Team creation and editing now select active accounts with the **Team Lead** job
-role, regardless of their access level. The API retains `managerId` and existing
-`manager_assignments` storage for compatibility and preserves assignment history.
-Existing assignments remain visible; new assignments require a Team Lead.
+Affected users receive live/access-change notifications and lose current-team
+permissions. No accounts, payment records, past sales or assignment history are
+deleted. Schema version 11 adds archive metadata with no database reset.

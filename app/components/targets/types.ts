@@ -8,6 +8,10 @@ export type Performance = {
   jobRole: string;
   basis: TargetBasis | null;
   targetPaise: number | null;
+  targetCount: number | null;
+  targetValue: number | null;
+  achievedValue: number;
+  remainingValue: number | null;
   revision: number | null;
   registrationPaise: number;
   overallPaise: number;
@@ -18,6 +22,8 @@ export type Performance = {
   remainingPaise: number | null;
 };
 export type TargetsPage = {
+  teamId: string;
+  teams: { id: string; name: string }[];
   month: string;
   from: string;
   to: string;

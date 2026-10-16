@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import { readFile, writeFile, access } from "node:fs/promises";
+import { writeFile, access } from "node:fs/promises";
+import { readWranglerConfig } from "./read-wrangler-config.mjs";
 import { constants } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -52,9 +53,7 @@ process.on("SIGINT", () => stop());
 process.on("SIGTERM", () => stop());
 
 try {
-  const config = JSON.parse(
-    await readFile(path.join(root, "wrangler.jsonc"), "utf8"),
-  );
+  const config = await readWranglerConfig(path.join(root, "wrangler.jsonc"));
   // Generate from production config so bindings/class migrations cannot drift.
   // This file stays next to .dev.vars; local account/session storage is shared
   // with cf:dev through the same Worker identity and persistence directory.

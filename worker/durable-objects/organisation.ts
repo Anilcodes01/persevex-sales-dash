@@ -9,6 +9,9 @@ import { routeOrganisationRequest } from "../routes/router";
 import { SalesLive } from "../realtime/sales-live";
 import { migrateMonthlyTargets } from "../storage/target-periods";
 import { TARGET_SCHEMA } from "../storage/targets-store";
+import { PAYMENT_SCHEMA, recordPayment } from "../payments/payment-store";
+import type { CashfreePayment } from "../payments/cashfree-webhook";
+import { migrateSalesCountTargets } from "../storage/sales-count-targets";
 
 // The coordinator owns persistent storage; route modules implement its APIs.
 export class Organisation extends DurableObject<Env> {
@@ -62,6 +65,24 @@ export class Organisation extends DurableObject<Env> {
         "UPDATE app_metadata SET value='6' WHERE key='schema_version' AND value='5'",
       );
       migrateMonthlyTargets(ctx.storage);
+      migrateSalesCountTargets(ctx.storage);
+      for (const statement of PAYMENT_SCHEMA) ctx.storage.sql.exec(statement);
+      ctx.storage.sql.exec(
+        "UPDATE app_metadata SET value='9' WHERE key='schema_version' AND value='8'",
+      );
+      const paymentColumns = ctx.storage.sql
+        .exec<{ name: string }>("PRAGMA table_info(cashfree_payments)")
+        .toArray();
+      if (!paymentColumns.some((column) => column.name === "verified"))
+        ctx.storage.sql.exec(
+          "ALTER TABLE cashfree_payments ADD COLUMN verified INTEGER NOT NULL DEFAULT 1 CHECK(verified IN (0,1))",
+        );
+      ctx.storage.sql.exec(
+        "UPDATE app_metadata SET value='10' WHERE key='schema_version' AND value='9'",
+      );
+      ctx.storage.sql.exec(
+        "UPDATE app_metadata SET value='11' WHERE key='schema_version' AND value='10'",
+      );
     });
     this.authStore = new AuthStore(ctx.storage);
     this.salesLive = new SalesLive(ctx, this.authStore);
@@ -86,6 +107,26 @@ export class Organisation extends DurableObject<Env> {
   }
 
   // Internal RPC only; no ledger data is exposed by this foundation.
+  async receiveCashfree(payment: CashfreePayment) {
+    if (!this.env.CASHFREE_ENV || payment.environment !== this.env.CASHFREE_ENV)
+      throw new HttpError(503, "Payment environment not configured");
+    const result = await recordPayment(payment, this.authStore);
+    if (!result.duplicate) {
+      try {
+        this.salesLive.publishPayments(result.version);
+      } catch {
+        // A failed notification must not fail a durably committed payment.
+        for (const socket of this.ctx.getWebSockets()) {
+          try {
+            socket.close(1011, "Reconnect to sync");
+          } catch {
+            /* Already closed. */
+          }
+        }
+      }
+    }
+    return { duplicate: result.duplicate };
+  }
   health() {
     const row = this.ctx.storage.sql
       .exec<{ value: string }>(
@@ -117,6 +158,7 @@ export class Organisation extends DurableObject<Env> {
           "/api/admin/accounts/disable",
           "/api/admin/accounts/reset-password",
           "/api/admin/teams/save",
+          "/api/admin/teams/delete",
           "/api/admin/teams/assign",
         ].includes(path)
       )

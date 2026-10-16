@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "../forms/date-picker";
 import { Label } from "@/components/ui/label";
@@ -22,9 +23,11 @@ import { jobRoleLabel } from "../../../shared/roles";
 import { api, ApiError, type Account } from "../../lib/api";
 import { useSalesLive } from "../../hooks/use-sales-live";
 import { FormSelect, SelectOption } from "../forms/form-select";
+import { SearchableSelect } from "../forms/searchable-select";
 import { WorkspaceDialog } from "../layout/workspace-dialog";
 import { PageHeading } from "../layout/page-heading";
 import { money } from "../sales/types";
+import { formatTarget } from "./format-target";
 import type { Performance, TargetsPage } from "./types";
 export function TargetsPanel({
   account,
@@ -33,21 +36,23 @@ export function TargetsPanel({
   account: Account;
   onSessionExpired: () => void;
 }) {
+  const [tableView, setTableView] = useState<"people" | "assigned">("people");
   const [range, setRange] = useState(() => monthDates());
+  const [teamId, setTeamId] = useState("");
   const [data, setData] = useState<TargetsPage | null>(null);
   const [selection, setSelection] = useState<{
     person: Performance;
     editing: boolean;
   } | null>(null);
   const [dates, setDates] = useState(() => monthDates());
-  const [basis, setBasis] = useState<TargetBasis>("registration");
+  const [basis, setBasis] = useState<TargetBasis>("sales_count");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const serial = useRef(0);
   const load = useCallback(() => {
     const request = ++serial.current;
     return api<TargetsPage>(
-      `/api/manager/targets?from=${range.from}&to=${range.to}`,
+      `/api/manager/targets?${new URLSearchParams({ from: range.from, to: range.to, teamId })}`,
     )
       .then((result) => {
         if (request === serial.current) setData(result);
@@ -66,7 +71,7 @@ export function TargetsPanel({
         );
         return false;
       });
-  }, [range.from, range.to, onSessionExpired]);
+  }, [range.from, range.to, teamId, onSessionExpired]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -84,10 +89,27 @@ export function TargetsPanel({
     onSessionExpired,
   });
   function open(person: Performance, editing: boolean) {
+    if (!editing) {
+      const existing = data?.targets.filter(target => target.id === person.id) ?? [];
+      const match = existing.find(target => target.fromDate === range.from && target.toDate === range.to)
+        ?? (existing.length === 1 ? existing[0] : undefined);
+      if (match) { person = match; editing = true; }
+      else if (existing.length > 1) {
+        setTableView("assigned");
+        toast.info("Choose the assigned target you want to edit.");
+        return;
+      }
+    }
     setSelection({ person, editing });
-    setBasis(editing ? (person.basis ?? "registration") : "registration");
+    setBasis(editing ? (person.basis ?? "sales_count") : "sales_count");
     setAmount(
-      editing && person.targetPaise ? String(person.targetPaise / 100) : "",
+      editing
+        ? person.basis === "sales_count"
+          ? String(person.targetCount ?? "")
+          : person.targetPaise
+            ? String(person.targetPaise / 100)
+            : ""
+        : "",
     );
     setDates(
       editing && person.fromDate && person.toDate
@@ -105,7 +127,7 @@ export function TargetsPanel({
         from: dates.from,
         to: dates.to,
         basis,
-        amount,
+        ...(basis === "sales_count" ? { count: amount } : { amount }),
         ...(selection.editing
           ? {
               targetId: selection.person.targetId,
@@ -115,6 +137,7 @@ export function TargetsPanel({
       });
       toast.success(selection.editing ? "Target updated." : "Target created.");
       setSelection(null);
+      setTableView("assigned");
       if (dates.from !== range.from || dates.to !== range.to) setRange(dates);
       else await load();
     } catch (error) {
@@ -125,7 +148,16 @@ export function TargetsPanel({
       setBusy(false);
     }
   }
-  const shown = data?.from === range.from && data.to === range.to ? data : null;
+  const shown =
+    data?.from === range.from && data.to === range.to && data.teamId === teamId
+      ? data
+      : null;
+  const assignments = new Map<string, Performance[]>();
+  for (const target of shown?.targets ?? [])
+    assignments.set(target.id, [...(assignments.get(target.id) ?? []), target]);
+  const assignedPeople =
+    shown?.people.filter((person) => assignments.has(person.id)).length ?? 0;
+  const unassignedPeople = (shown?.people.length ?? 0) - assignedPeople;
   return (
     <>
       <PageHeading
@@ -137,6 +169,24 @@ export function TargetsPanel({
         }
       />
       <div className="targets-toolbar">
+        {account.role === "admin" && (
+          <Label className="targets-team-filter">
+            Team
+            <SearchableSelect
+              value={teamId}
+              label="Teams"
+              allLabel="All teams"
+              options={(data?.teams ?? []).map((team) => ({
+                value: team.id,
+                label: team.name,
+              }))}
+              onChange={(value) => {
+                setTeamId(value);
+                setSelection(null);
+              }}
+            />
+          </Label>
+        )}
         <Label>
           View from (IST)
           <DatePicker
@@ -174,123 +224,188 @@ export function TargetsPanel({
         </Button>
         <span role="status">{live.state}</span>
       </div>
-      <section className="roster-panel">
+      <section className="roster-panel" aria-label="Target management">
         <div className="panel-title">
           <div>
-            <h2>People</h2>
+            <h2>{tableView === "people" ? "People" : "Assigned targets"}</h2>
             <p>
-              Create a target for the selected dates. Existing targets appear
-              below.
+              {tableView === "people"
+                ? "Choose a person to set a target for the selected dates."
+                : "Targets overlapping the view dates. Achievement uses each target’s full date range."}
             </p>
           </div>
-        </div>
-        <div className="table-scroll">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Person</TableHead>
-                <TableHead>Approved registration</TableHead>
-                <TableHead>Approved overall value</TableHead>
-                <TableHead>Manage</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {shown?.people.map((person) => (
-                <TableRow key={person.id}>
-                  <TableCell>
-                    <strong>{person.displayName}</strong>
-                    <p>{jobRoleLabel(person.jobRole)}</p>
-                  </TableCell>
-                  <TableCell>{money(person.registrationPaise)}</TableCell>
-                  <TableCell>{money(person.overallPaise)}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      onClick={() => open(person, false)}
-                    >
-                      Set target
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-        {shown && !shown.people.length && (
-          <p className="sales-panel">No eligible employees assigned.</p>
-        )}
-      </section>
-      <section className="roster-panel targets-assigned">
-        <div className="panel-title">
-          <div>
-            <h2>Assigned targets</h2>
-            <p>
-              Targets overlapping the view dates. Achievement uses each target’s
-              full date range.
-            </p>
+          <div
+            className="targets-view-switch"
+            role="group"
+            aria-label="Target table view"
+          >
+            <Button
+              variant={tableView === "people" ? "default" : "outline"}
+              aria-pressed={tableView === "people"}
+              onClick={() => setTableView("people")}
+            >
+              People {shown ? `(${shown.people.length})` : ""}
+            </Button>
+            <Button
+              variant={tableView === "assigned" ? "default" : "outline"}
+              aria-pressed={tableView === "assigned"}
+              onClick={() => setTableView("assigned")}
+            >
+              Assigned targets {shown ? `(${shown.targets.length})` : ""}
+            </Button>
           </div>
         </div>
-        <div className="table-scroll">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Person / period</TableHead>
-                <TableHead>Basis</TableHead>
-                <TableHead>Target</TableHead>
-                <TableHead>Achieved</TableHead>
-                <TableHead>Achievement</TableHead>
-                <TableHead>Manage</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {shown?.targets.map((target) => (
-                <TableRow key={target.targetId}>
-                  <TableCell>
-                    <strong>{target.displayName}</strong>
-                    <p>
-                      {target.fromDate} → {target.toDate}
-                    </p>
-                  </TableCell>
-                  <TableCell>
-                    {TARGET_BASES.find((b) => b.value === target.basis)?.label}
-                  </TableCell>
-                  <TableCell>{money(target.targetPaise ?? 0)}</TableCell>
-                  <TableCell>
-                    {money(target.achievedPaise)}
-                    {target.basis === "overall" &&
-                      target.missingOverallCount > 0 && (
+        {tableView === "people" ? (
+          <>
+            <div className="target-assignment-summary" role="status">
+              <Badge variant="outline">
+                Assigned: {shown ? assignedPeople : "—"}
+              </Badge>
+              <Badge variant="outline">
+                Not assigned: {shown ? unassignedPeople : "—"}
+              </Badge>
+              <span>People with targets overlapping the selected dates</span>
+            </div>
+            <div className="table-scroll">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Person</TableHead>
+                    <TableHead>Target status</TableHead>
+                    <TableHead>Approved sales</TableHead>
+                    <TableHead>Approved registration</TableHead>
+                    <TableHead>Approved overall value</TableHead>
+                    <TableHead>Manage</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {shown?.people.map((person) => (
+                    <TableRow key={person.id}>
+                      <TableCell>
+                        <strong>{person.displayName}</strong>
+                        <p>{jobRoleLabel(person.jobRole)}</p>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={
+                            assignments.has(person.id)
+                              ? "target-is-assigned"
+                              : "target-is-unassigned"
+                          }
+                        >
+                          {assignments.has(person.id)
+                            ? `Assigned · ${assignments
+                                .get(person.id)!
+                                .map((target) => {
+                                  const value = formatTarget(
+                                    target.targetValue,
+                                    target.basis,
+                                  );
+                                  const label =
+                                    target.basis === "sales_count"
+                                      ? value
+                                      : `${value} (${TARGET_BASES.find((b) => b.value === target.basis)?.label})`;
+                                  return assignments.get(person.id)!.length > 1
+                                    ? `${label} [${target.fromDate} → ${target.toDate}]`
+                                    : label;
+                                })
+                                .join("; ")}`
+                            : "Not assigned"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{person.approvedCount}</TableCell>
+                      <TableCell>{money(person.registrationPaise)}</TableCell>
+                      <TableCell>{money(person.overallPaise)}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          onClick={() => open(person, false)}
+                        >
+                          {person.targetId ? "Edit target" : "Set / edit target"}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {shown && !shown.people.length && (
+              <p className="sales-panel">No eligible employees assigned.</p>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="table-scroll">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Person / period</TableHead>
+                    <TableHead>Basis</TableHead>
+                    <TableHead>Target</TableHead>
+                    <TableHead>Achieved</TableHead>
+                    <TableHead>Achievement</TableHead>
+                    <TableHead>Manage</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {shown?.targets.map((target) => (
+                    <TableRow key={target.targetId}>
+                      <TableCell>
+                        <strong>{target.displayName}</strong>
                         <p>
-                          {target.missingOverallCount} historical overall values
-                          not recorded.
+                          {target.fromDate} → {target.toDate}
                         </p>
-                      )}
-                  </TableCell>
-                  <TableCell>{target.achievement?.toFixed(1)}%</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      onClick={() => open(target, true)}
-                    >
-                      Edit target
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-        {shown && !shown.targets.length && (
-          <p className="sales-panel">No targets in this date range.</p>
+                      </TableCell>
+                      <TableCell>
+                        {
+                          TARGET_BASES.find((b) => b.value === target.basis)
+                            ?.label
+                        }
+                      </TableCell>
+                      <TableCell>
+                        {formatTarget(target.targetValue, target.basis)}
+                      </TableCell>
+                      <TableCell>
+                        {formatTarget(target.achievedValue, target.basis)}
+                        {target.basis === "overall" &&
+                          target.missingOverallCount > 0 && (
+                            <p>
+                              {target.missingOverallCount} historical overall
+                              values not recorded.
+                            </p>
+                          )}
+                      </TableCell>
+                      <TableCell>{target.achievement?.toFixed(1)}%</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          onClick={() => open(target, true)}
+                        >
+                          Edit target
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {shown && !shown.targets.length && (
+              <p className="sales-panel">No targets in this date range.</p>
+            )}
+          </>
         )}
       </section>
       {selection && (
         <WorkspaceDialog
           title={`${selection.editing ? "Edit" : "Set"} target for ${selection.person.displayName}`}
-          description="Both dates are inclusive in Asia/Kolkata. Approved sales only; periods for the same person cannot overlap."
+          description="Set a goal and period. Only approved sales count toward achievement."
+          className="target-editor-dialog"
           locked={busy}
           onClose={() => setSelection(null)}
         >
-          <form className="account-form" onSubmit={save}>
+          <form className="account-form target-editor-form" onSubmit={save}>
+            <div className="target-date-fields">
             <Label>
               From date
               <DatePicker
@@ -317,18 +432,25 @@ export function TargetsPanel({
                 }
               />
             </Label>
+            </div>
+            <div className="target-period-help">
+            <p>Inclusive dates · IST. Target periods cannot overlap.</p>
             <Button
               type="button"
               variant="outline"
               onClick={() => setDates(monthDates())}
             >
-              Use current calendar month
+              Current month
             </Button>
+            </div>
             <Label>
               Target basis
               <FormSelect
                 value={basis}
-                onChange={(e) => setBasis(e.target.value as TargetBasis)}
+                onChange={(e) => {
+                  setBasis(e.target.value as TargetBasis);
+                  setAmount("");
+                }}
               >
                 {TARGET_BASES.map((b) => (
                   <SelectOption key={b.value} value={b.value}>
@@ -337,20 +459,24 @@ export function TargetsPanel({
                 ))}
               </FormSelect>
             </Label>
-            <p>
-              {basis === "registration"
-                ? "Initial registration amounts collected on approved sales."
-                : "Total sale values including remaining amounts; this is not collected revenue."}
+            <p className="target-basis-help">
+              {basis === "sales_count"
+                ? "Each approved sale counts once within the selected dates. Pending and rejected sales do not count."
+                : basis === "registration"
+                  ? "Initial registration amounts collected on approved sales."
+                  : "Total sale values including remaining amounts; this is not collected revenue."}
             </p>
             <Label>
-              Target amount (₹)
+              {basis === "sales_count"
+                ? "Target number of sales"
+                : "Target amount (₹)"}
               <Input
                 type="number"
-                inputMode="decimal"
+                inputMode={basis === "sales_count" ? "numeric" : "decimal"}
                 required
-                min="0.01"
-                max="99999999.99"
-                step="0.01"
+                min={basis === "sales_count" ? "1" : "0.01"}
+                max={basis === "sales_count" ? "9999999" : "99999999.99"}
+                step={basis === "sales_count" ? "1" : "0.01"}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />

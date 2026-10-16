@@ -23,7 +23,7 @@ export function adminOverview(store: AuthStore, url: URL) {
   const workspace = store.storage.sql
     .exec(
       `SELECT
-    (SELECT COUNT(*) FROM teams) AS teams,
+    (SELECT COUNT(*) FROM teams WHERE id NOT IN (SELECT team_id FROM deleted_teams)) AS teams,
     COUNT(*) AS accounts,
     COUNT(CASE WHEN active=1 THEN 1 END) AS activeAccounts,
     COUNT(CASE WHEN active=1 AND job_role='team_lead' THEN 1 END) AS teamLeads

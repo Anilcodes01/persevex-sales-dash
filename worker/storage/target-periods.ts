@@ -91,7 +91,7 @@ export function migrateMonthlyTargets(storage: DurableObjectStorage) {
     const range = requestedRange({ month: row.month });
     const id = `legacy:${row.account_id}:${row.month}`;
     storage.sql.exec(
-      "INSERT INTO period_targets VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO period_targets (id,account_id,from_date,to_date,starts_at,ends_at,basis,amount_paise,revision,updated_by,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
       id,
       row.account_id,
       range.from,
@@ -120,7 +120,7 @@ export function migrateMonthlyTargets(storage: DurableObjectStorage) {
   for (const row of revisions) {
     const range = requestedRange({ month: row.month });
     storage.sql.exec(
-      "INSERT INTO period_target_revisions VALUES (?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO period_target_revisions (id,target_id,account_id,from_date,to_date,basis,amount_paise,revision,actor_id,recorded_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
       row.id,
       `legacy:${row.account_id}:${row.month}`,
       row.account_id,

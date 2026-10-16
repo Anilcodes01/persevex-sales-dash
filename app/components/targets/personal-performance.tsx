@@ -8,6 +8,7 @@ import { monthDates, TARGET_BASES } from "../../../shared/targets";
 import { api, ApiError } from "../../lib/api";
 import { useSalesLive } from "../../hooks/use-sales-live";
 import { money } from "../sales/types";
+import { formatTarget } from "./format-target";
 import type { Performance } from "./types";
 type ResponseData = {
   from: string;
@@ -69,7 +70,7 @@ export function PersonalPerformance({
         <h2>Your performance</h2>
         <span role="status">{live.state} · Approved sales only</span>
       </div>
-      <div className="targets-toolbar">
+      <div className="targets-toolbar personal-performance-toolbar">
         <Label>
           From (IST)
           <DatePicker
@@ -166,17 +167,23 @@ export function PersonalPerformance({
               <p>{TARGET_BASES.find((b) => b.value === target.basis)?.label}</p>
             </span>
             <span>
-              Target: <strong>{money(target.targetPaise ?? 0)}</strong>
+              Target:{" "}
+              <strong>{formatTarget(target.targetValue, target.basis)}</strong>
             </span>
             <span>
-              Achieved: <strong>{money(target.achievedPaise)}</strong>
+              Achieved:{" "}
+              <strong>
+                {formatTarget(target.achievedValue, target.basis)}
+              </strong>
             </span>
             <span>
               Achievement: <strong>{target.achievement?.toFixed(1)}%</strong>
             </span>
             <span>
               Remaining to target:{" "}
-              <strong>{money(target.remainingPaise ?? 0)}</strong>
+              <strong>
+                {formatTarget(target.remainingValue, target.basis)}
+              </strong>
             </span>
             {target.basis === "overall" && target.missingOverallCount > 0 && (
               <small>

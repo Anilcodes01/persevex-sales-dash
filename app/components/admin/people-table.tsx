@@ -1,13 +1,6 @@
 "use client";
-import { Button } from "@/components/ui/button";
-import { MoreHorizontal, User } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { User } from "lucide-react";
+
 import {
   Table,
   TableHeader,
@@ -18,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { jobRoleLabel, accessLabel } from "../../../shared/roles";
 import type { RosterAccount } from "../../lib/api";
-import { initials } from "../../lib/display";
+import { PeopleActions } from "./people-actions";
 import type { Action } from "./types";
 export function PeopleTable({
   accounts,
@@ -38,6 +31,7 @@ export function PeopleTable({
           <TableRow>
             <TableHead>Team member</TableHead>
             <TableHead>Job role</TableHead>
+            <TableHead>Team</TableHead>
             <TableHead>Access</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Added</TableHead>
@@ -64,6 +58,7 @@ export function PeopleTable({
               <TableCell>
                 <div>{jobRoleLabel(person.jobRole)}</div>
               </TableCell>
+              <TableCell>{person.teams?.map((team) => team.name).join(", ") || "Not assigned"}</TableCell>
               <TableCell>
                 <div>{accessLabel(person.role)}</div>
               </TableCell>
@@ -85,38 +80,11 @@ export function PeopleTable({
               </TableCell>
               <TableCell>
                 <div className="row-actions">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`Manage ${person.displayName}`}
-                      >
-                        <MoreHorizontal />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => open("edit", person)}>
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => open("reset", person)}>
-                        Reset password
-                      </DropdownMenuItem>
-                      {person.id !== currentAccountId && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            variant={person.active ? "destructive" : "default"}
-                            onSelect={() =>
-                              open(person.active ? "disable" : "enable", person)
-                            }
-                          >
-                            {person.active ? "Disable" : "Reactivate"}
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <PeopleActions
+                    person={person}
+                    currentAccountId={currentAccountId}
+                    open={open}
+                  />
                 </div>
               </TableCell>
             </TableRow>

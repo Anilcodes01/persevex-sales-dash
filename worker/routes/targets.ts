@@ -26,7 +26,24 @@ export function listTargets(actor: Account, store: AuthStore, url: URL) {
     throw new HttpError(403, "Team Lead or administrator access required");
   const range = requestedRange(url.searchParams),
     scope = targetScope(actor);
+  const teamId =
+    actor.role === "admin" ? url.searchParams.get("teamId") || "" : "";
+  if (teamId) {
+    scope.where +=
+      " AND (a.id IN (SELECT account_id FROM team_memberships WHERE team_id=? AND ends_at IS NULL) OR a.id IN (SELECT account_id FROM manager_assignments WHERE team_id=? AND ends_at IS NULL))";
+    scope.args.push(teamId, teamId);
+  }
+  const teams =
+    actor.role === "admin"
+      ? store.storage.sql
+          .exec<{ id: string; name: string }>(
+            "SELECT id,name FROM teams WHERE id NOT IN (SELECT team_id FROM deleted_teams) ORDER BY name_key",
+          )
+          .toArray()
+      : [];
   return json({
+    teamId,
+    teams,
     month: range.from.slice(0, 7),
     from: range.from,
     to: range.to,
@@ -47,8 +64,18 @@ export function saveTarget(
     !TARGET_BASES.some((b) => b.value === body.basis)
   )
     throw new HttpError(400, "Select a person and target basis");
-  const amount = rupeesToPaise(body.amount, "Target"),
-    scope = targetScope(actor);
+  const count = body.basis === "sales_count";
+  const targetCount =
+    count && typeof body.count === "string" && /^[1-9]\d{0,6}$/.test(body.count)
+      ? Number(body.count)
+      : null;
+  if (count && targetCount === null)
+    throw new HttpError(
+      400,
+      "Enter a whole-number sales target between 1 and 9999999",
+    );
+  const amount = count ? null : rupeesToPaise(body.amount, "Target");
+  const scope = targetScope(actor);
   const recipient = store.storage.sql
     .exec<Account>(
       `SELECT a.* FROM accounts a WHERE a.id=? AND ${scope.where}`,
@@ -68,6 +95,7 @@ export function saveTarget(
       id: string;
       basis: string;
       amount_paise: number;
+      target_count: number | null;
       revision: number;
       from_date: string;
       to_date: string;
@@ -92,6 +120,7 @@ export function saveTarget(
   if (
     existing?.basis === body.basis &&
     existing.amount_paise === amount &&
+    existing.target_count === targetCount &&
     existing.from_date === range.from &&
     existing.to_date === range.to
   )
@@ -121,7 +150,7 @@ export function saveTarget(
   let version = 0;
   store.storage.transactionSync(() => {
     store.storage.sql.exec(
-      `INSERT INTO period_targets VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET from_date=excluded.from_date,to_date=excluded.to_date,starts_at=excluded.starts_at,ends_at=excluded.ends_at,basis=excluded.basis,amount_paise=excluded.amount_paise,revision=excluded.revision,updated_by=excluded.updated_by,updated_at=excluded.updated_at`,
+      `INSERT INTO period_targets VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET from_date=excluded.from_date,to_date=excluded.to_date,starts_at=excluded.starts_at,ends_at=excluded.ends_at,basis=excluded.basis,amount_paise=excluded.amount_paise,target_count=excluded.target_count,revision=excluded.revision,updated_by=excluded.updated_by,updated_at=excluded.updated_at`,
       id,
       recipient.id,
       range.from,
@@ -133,9 +162,10 @@ export function saveTarget(
       revision,
       actor.id,
       now,
+      targetCount,
     );
     store.storage.sql.exec(
-      "INSERT INTO period_target_revisions VALUES (?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO period_target_revisions VALUES (?,?,?,?,?,?,?,?,?,?,?)",
       crypto.randomUUID(),
       id,
       recipient.id,
@@ -146,6 +176,7 @@ export function saveTarget(
       revision,
       actor.id,
       now,
+      targetCount,
     );
     store.audit(actor.id, "target_updated", recipient.id);
     version = advanceSalesVersion(store);

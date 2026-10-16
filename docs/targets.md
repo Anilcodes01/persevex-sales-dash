@@ -86,3 +86,32 @@ Operator check: create a custom target, submit and approve sales inside/outside
 its period, then use **Edit target** to change dates, basis and amount. Verify
 updated achievement in another signed-in overview and target screen. Server,
 browser and deployment verification remains user-run.
+
+## Number-of-sales targets
+
+The target-basis selector also supports `sales_count` (Number of sales).
+Admins can assign it to eligible employees and Team Leads; Team Leads can
+assign it only to their existing eligible employee scope. Date selection,
+overlap protection, revisions, audit history and live notifications apply.
+Only approved sale records created within the inclusive IST target dates
+count. A record counts once regardless of its registration or overall value.
+Pending/rejected sales do not count. Achievement can exceed 100%.
+
+POST `/api/manager/targets` accepts `basis: "sales_count"` and a decimal-string
+`count` containing a whole number from 1 to 9999999, instead of `amount`.
+Monetary targets still accept `amount` in rupees. A target may be edited to a
+different basis; previous revisions retain their original units and values.
+
+Schema version 8 stores count targets in `target_count` and keeps monetary
+`amount_paise` null for those rows. Existing monetary values and revisions are
+preserved by a startup transaction. No database reset or re-bootstrap is needed.
+Performance responses provide `targetCount`, `targetValue`, `achievedValue`
+and `remainingValue`; generic values use counts for sales-count targets and
+paise for monetary targets. The UI formats those values using the basis.
+
+The administrator Targets page has a searchable Team filter (default All teams).
+Both eligible people and assigned targets are filtered server-side by current
+team membership or Team Lead assignment. Reporting dates remain independent.
+Team Leads retain their restricted scope; a teamId parameter cannot expand it.
+
+The People table’s set/edit action opens an existing overlapping target when there is one (preferring an exact date match), including its current basis and revision. When several targets overlap the view, select the desired record from Assigned targets. Editing can switch between monetary and sales-count bases without creating a conflicting duplicate.

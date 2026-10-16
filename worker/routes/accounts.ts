@@ -16,6 +16,7 @@ export function listAccounts(url: URL, store: AuthStore): Response {
     accounts: result.accounts.map((account) => ({
       ...publicAccount(account),
       createdAt: account.created_at,
+      teams: account.teams,
     })),
   });
 }

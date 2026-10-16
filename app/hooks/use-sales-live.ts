@@ -119,7 +119,10 @@ export function useSalesLive({
               connection.close();
             }, 15000);
           }, 60000);
-        } else if (message.type === "sales_changed") {
+        } else if (
+          message.type === "sales_changed" ||
+          message.type === "payments_changed"
+        ) {
           if (message.version <= version) return;
           // Versions are global; gaps can be changes outside this account's scope.
           version = message.version;

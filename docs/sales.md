@@ -78,7 +78,7 @@ selects/calendars and existing live sales updates.
 TV display: sign in as an administrator, then open `/tv`. The sidebar-free
 full-screen display ranks employees and historical sale teams by approved
 registration amount for the current IST month. Equal amounts share a rank;
-Team Leads' own sales are included. Both lists rotate in groups of five every
+Team Leads' own sales are included. The selected list rotates in groups of seven every
 15 seconds. Recent activity includes pending/approved/rejected sales but no
 student details. `/api/admin/tv` aggregates all matching rows server-side,
 not only the first page of sales. The existing authenticated live socket
@@ -98,3 +98,28 @@ value and remaining amounts. Unknown legacy overall values are flagged and
 excluded from value/remaining totals. Registrations count approved sale records,
 not distinct students. Workspace account/team totals are current and independent
 of reporting dates. The page uses existing live updates and calendar controls.
+
+The TV layout is now two panels: Sales performance with Team/Individual
+buttons on the left and Payments (Cashfree) on the right. Totals, activity
+cards and the previous outer header/footer are removed. Cashfree rows are
+static fictional fixtures, explicitly marked Demo data, independent of sales.
+Existing live ranking animations remain. Registration totals remain real;
+count-based target/achievement values from the visual reference are not invented.
+
+TV count columns: Target, Sales and Achieved replace monetary registration
+values. Rankings use approved sales count with shared count ties. Targets must
+be sales-count targets matching the complete displayed calendar month. Team
+targets sum current memberships plus the Team Lead, deduplicated by person;
+if any person lacks a matching target, the team target is Not set and its
+percentage is blank. Custom-period and monetary targets are not converted.
+Percentages can exceed 100%; the visual bar stops at 100%.
+
+Cashfree is now implemented: the TV panel uses authenticated, masked, current-
+month successful payment rows instead of demo fixtures. See
+[cashfree-webhooks.md](cashfree-webhooks.md) for user-run deployment, sandbox
+setup, secrets, security controls and limitations. It remains independent of
+employee submissions and leaderboard/target credit.
+
+### Administrator sales reset
+
+In People, use a person’s three-dot menu → Reset sales. Choose inclusive IST dates and confirm. All existing pending or approved sales in that range become rejected with an administrator reset reason; original student details, amounts, submission IDs and collection events remain in history. Approved totals, target progress and TV rankings update through the existing live notifications. Already rejected sales stay unchanged. New submissions after the reset count normally. The action is admin-only and audited per sale; reset records cannot be approved again through the review endpoint.

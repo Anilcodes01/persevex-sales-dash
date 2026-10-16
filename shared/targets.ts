@@ -1,4 +1,5 @@
 export const TARGET_BASES = [
+  { value: "sales_count", label: "Number of sales" },
   { value: "registration", label: "Registration amount" },
   { value: "overall", label: "Overall amount (total sale value)" },
 ] as const;

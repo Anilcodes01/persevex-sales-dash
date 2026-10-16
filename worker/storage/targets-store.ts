@@ -2,6 +2,7 @@ import type { Account } from "../types";
 import type { AuthStore } from "./auth-store";
 import type { TargetRange } from "./target-periods";
 import { requestedRange } from "./target-periods";
+import type { TargetBasis } from "../../shared/targets";
 import { currentMonth } from "../../shared/targets";
 import { HttpError } from "../http/helpers";
 export const TARGET_SCHEMA = [
@@ -63,8 +64,9 @@ export function targetProgress(
       toDate: string | null;
       displayName: string;
       jobRole: string;
-      basis: "registration" | "overall" | null;
+      basis: TargetBasis | null;
       targetPaise: number | null;
+      targetCount: number | null;
       revision: number | null;
       registrationPaise: number;
       overallPaise: number;
@@ -72,7 +74,7 @@ export function targetProgress(
       missingOverallCount: number;
     }>(
       `SELECT a.id, t.id AS targetId, t.from_date AS fromDate, t.to_date AS toDate, a.display_name AS displayName, a.job_role AS jobRole,
-    t.basis, t.amount_paise AS targetPaise, t.revision,
+    t.basis, t.amount_paise AS targetPaise, t.target_count AS targetCount, t.revision,
     COALESCE(p.registrationPaise,0) AS registrationPaise, COALESCE(p.overallPaise,0) AS overallPaise,
     COALESCE(p.approvedCount,0) AS approvedCount, COALESCE(p.missingOverallCount,0) AS missingOverallCount
     FROM accounts a LEFT JOIN period_targets t ON t.account_id=a.id AND t.from_date=? AND t.to_date=?
@@ -89,22 +91,7 @@ export function targetProgress(
       ...args,
     )
     .toArray();
-  return people.map((person) => {
-    const achievedPaise =
-      person.basis === "overall"
-        ? person.overallPaise
-        : person.registrationPaise;
-    return {
-      ...person,
-      achievedPaise,
-      achievement: person.targetPaise
-        ? (achievedPaise / person.targetPaise) * 100
-        : null,
-      remainingPaise: person.targetPaise
-        ? Math.max(0, person.targetPaise - achievedPaise)
-        : null,
-    };
-  });
+  return people.map(targetValues);
 }
 
 export function assignedTargetProgress(
@@ -121,8 +108,9 @@ export function assignedTargetProgress(
       jobRole: string;
       fromDate: string;
       toDate: string;
-      basis: "registration" | "overall";
-      targetPaise: number;
+      basis: TargetBasis;
+      targetPaise: number | null;
+      targetCount: number | null;
       revision: number;
       registrationPaise: number;
       overallPaise: number;
@@ -130,7 +118,7 @@ export function assignedTargetProgress(
       missingOverallCount: number;
     }>(
       `SELECT a.id, t.id AS targetId, a.display_name AS displayName, a.job_role AS jobRole,
-    t.from_date AS fromDate, t.to_date AS toDate, t.basis, t.amount_paise AS targetPaise,t.revision,
+    t.from_date AS fromDate, t.to_date AS toDate, t.basis, t.amount_paise AS targetPaise, t.target_count AS targetCount,t.revision,
     COALESCE(SUM(s.amount_paise),0) AS registrationPaise,COALESCE(SUM(s.overall_amount_paise),0) AS overallPaise,
     COUNT(s.id) AS approvedCount,SUM(CASE WHEN s.id IS NOT NULL AND s.overall_amount_paise IS NULL THEN 1 ELSE 0 END) AS missingOverallCount
     FROM period_targets t JOIN accounts a ON a.id=t.account_id
@@ -142,16 +130,33 @@ export function assignedTargetProgress(
       ...args,
     )
     .toArray();
-  return rows.map((person) => {
-    const achievedPaise =
-      person.basis === "overall"
-        ? person.overallPaise
-        : person.registrationPaise;
-    return {
-      ...person,
-      achievedPaise,
-      achievement: (achievedPaise / person.targetPaise) * 100,
-      remainingPaise: Math.max(0, person.targetPaise - achievedPaise),
-    };
-  });
+  return rows.map(targetValues);
+}
+
+function targetValues<
+  T extends {
+    basis: TargetBasis | null;
+    targetPaise: number | null;
+    targetCount: number | null;
+    registrationPaise: number;
+    overallPaise: number;
+    approvedCount: number;
+  },
+>(person: T) {
+  const achievedPaise =
+    person.basis === "overall" ? person.overallPaise : person.registrationPaise;
+  const count = person.basis === "sales_count";
+  const targetValue = count ? person.targetCount : person.targetPaise;
+  const achievedValue = count ? person.approvedCount : achievedPaise;
+  const remainingValue =
+    targetValue === null ? null : Math.max(0, targetValue - achievedValue);
+  return {
+    ...person,
+    achievedPaise,
+    targetValue,
+    achievedValue,
+    remainingValue,
+    achievement: targetValue ? (achievedValue / targetValue) * 100 : null,
+    remainingPaise: count ? null : remainingValue,
+  };
 }

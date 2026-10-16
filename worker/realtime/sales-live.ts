@@ -127,6 +127,19 @@ export class SalesLive {
       }
     }
   }
+  publishPayments(version: number) {
+    const admins = this.store.storage.sql
+      .exec<{ id: string }>(
+        "SELECT id FROM accounts WHERE role='admin' AND active=1",
+      )
+      .toArray();
+    for (const admin of admins)
+      for (const socket of this.ctx.getWebSockets(`account:${admin.id}`)) {
+        const actor = this.valid(socket);
+        if (actor?.role === "admin")
+          this.send(socket, { type: "payments_changed", version });
+      }
+  }
   async scheduleExpiry() {
     const expiries = this.ctx
       .getWebSockets()

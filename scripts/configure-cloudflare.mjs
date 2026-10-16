@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { parseEnv } from "node:util";
+import { readWranglerConfig } from "./read-wrangler-config.mjs";
 
 try {
   const env = parseEnv(await readFile(".env", "utf8"));
@@ -10,7 +11,7 @@ try {
       "Set a valid Cloudflare Account ID in .env under CLOUDFLARE_WORKERS_PAGES_ACCOUNT_ID or CLOUDFLARE_ACCOUNT_ID.",
     );
   }
-  const config = JSON.parse(await readFile("wrangler.jsonc", "utf8"));
+  const config = await readWranglerConfig("wrangler.jsonc");
   config.account_id = accountId.trim();
   await writeFile("wrangler.jsonc", JSON.stringify(config, null, 2) + "\n");
   console.log(

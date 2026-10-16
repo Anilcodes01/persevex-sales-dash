@@ -18,11 +18,12 @@ export function usePeopleDirectory({
   const [role, setRole] = useState("all");
   const [jobRole, setJobRole] = useState("all");
   const [status, setStatus] = useState("all");
+  const [teamId, setTeamId] = useState("");
   const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
   const [loadedKey, setLoadedKey] = useState("");
   const requestSerial = useRef(0);
-  const filterKey = JSON.stringify([search, role, jobRole, status, page]);
+  const filterKey = JSON.stringify([search, role, jobRole, status, teamId, page]);
   const loading = refreshing || loadedKey !== filterKey;
   const [selection, setSelection] = useState<Selection | null>(null);
   const [busy, setBusy] = useState(false);
@@ -32,6 +33,7 @@ export function usePeopleDirectory({
   const load = useCallback(() => {
     const serial = ++requestSerial.current;
     const params = new URLSearchParams({
+      teamId,
       q: search,
       role,
       jobRole,
@@ -63,6 +65,7 @@ export function usePeopleDirectory({
     jobRole,
     status,
     page,
+    teamId,
     filterKey,
     onSessionExpired,
     setError,
@@ -88,6 +91,7 @@ export function usePeopleDirectory({
     setNotice("");
     try {
       const paths: Record<Action, string> = {
+        resetSales: "/api/admin/accounts/reset-sales",
         create: "/api/admin/accounts",
         edit: "/api/admin/accounts/update",
         reset: "/api/admin/accounts/reset-password",
@@ -99,6 +103,7 @@ export function usePeopleDirectory({
         accountId: selection.account?.id,
       });
       const messages: Record<Action, string> = {
+        resetSales: "Sales reset for the selected dates. Records are retained in history.",
         create:
           "Account created. Share the sign-in credentials privately; they can sign in directly to their dashboard.",
         edit: "Account details updated.",
@@ -129,6 +134,8 @@ export function usePeopleDirectory({
   }
   return {
     roster,
+    teamId,
+    setTeamId,
     query,
     setQuery,
     search,

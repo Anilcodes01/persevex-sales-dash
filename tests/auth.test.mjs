@@ -13,8 +13,9 @@ const bundle = await build({
   } }],
 });
 const { Organisation, default: worker } = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].text).toString('base64'));
-function fixture() {
+function fixture(beforeInit) {
   const db = new DatabaseSync(':memory:');
+  beforeInit?.(db);
   const storage = {
     sql: { exec(query, ...args) {
       const statement = db.prepare(query);
@@ -90,7 +91,7 @@ test('expired sessions, origin checks, oversized input and persistent throttling
   assert.ok(!hash.includes(password));
   const [, salt, derived] = hash.split('$');
   assert.equal(scryptSync(password, Buffer.from(salt, 'hex'), 32, { N: 16384, r: 8, p: 5, maxmem: 32 * 1024 * 1024 }).toString('hex'), derived);
-  assert.equal(f.object.health().schemaVersion, 7);
+  assert.equal(f.object.health().schemaVersion, 11);
 });
 
 test('employee-access Team Leads see only their led teams and retain assignments on profile edits', async () => {
@@ -337,7 +338,7 @@ test('target changes notify owners and existing records survive schema initializ
   assert.equal(response.status,200);
   assert.deepEqual(socket.messages.at(-1),{type:'sales_changed',version:1});
   const restored=new Organisation(f.ctx,f.env);
-  assert.equal(restored.health().schemaVersion,7);
+  assert.equal(restored.health().schemaVersion,11);
   assert.equal(f.db.prepare('SELECT amount_paise FROM period_targets').get().amount_paise,500000);
   assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM accounts').get().n,1);
 });
@@ -402,7 +403,7 @@ test('monthly targets and revisions migrate once to calendar date periods includ
   f.db.prepare('INSERT INTO target_revisions VALUES (?,?,?,?,?,?,?,?)').run('old-revision-1',id,'2024-02','registration',50000,1,id,122);
   f.db.prepare('INSERT INTO target_revisions VALUES (?,?,?,?,?,?,?,?)').run('old-revision-2',id,'2024-02','overall',75000,2,id,123);
   const migrated=new Organisation(f.ctx,f.env);
-  assert.equal(migrated.health().schemaVersion,7);
+  assert.equal(migrated.health().schemaVersion,11);
   const target=f.db.prepare('SELECT * FROM period_targets').get();
   assert.equal(target.from_date,'2024-02-01');assert.equal(target.to_date,'2024-02-29');
   assert.equal(target.amount_paise,75000);assert.equal(target.revision,2);
@@ -486,6 +487,27 @@ test('TV leaderboard ranks approved registrations with shared ties and excludes 
   assert.ok(!JSON.stringify(board).includes('Private'));
   assert.ok(!JSON.stringify(board).includes('9876543210'));
   assert.ok(!JSON.stringify(board).includes('@example.test'));
+  const start = Date.parse(board.period.from+'T00:00:00+05:30');
+  const end = Date.parse(board.period.to+'T00:00:00+05:30')+86400000;
+  const target = f.db.prepare('INSERT INTO period_targets VALUES (?,?,?,?,?,?,?,?,?,?,?,?)');
+  target.run('tv-target-a',admin,board.period.from,board.period.to,start,end,'sales_count',null,1,admin,Date.now(),4);
+  target.run('tv-target-b','second',board.period.from,board.period.to,start,end,'sales_count',null,1,admin,Date.now(),2);
+  f.db.prepare('INSERT INTO team_memberships VALUES (?,?,?,?,NULL)').run('tv-member-a',admin,'tv-a',start);
+  f.db.prepare('INSERT INTO manager_assignments VALUES (?,?,?,?,NULL)').run('tv-lead-a',admin,'tv-a',start);
+  f.db.prepare('INSERT INTO team_memberships VALUES (?,?,?,?,NULL)').run('tv-member-b','second','tv-b',start);
+  f.db.prepare("UPDATE sales SET amount_paise=20000 WHERE id='tv-1'").run();
+  const counts = await (await f.request('/api/admin/tv',undefined,cookie)).json();
+  assert.deepEqual(counts.employees.map(row=>row.rank),[1,1]); // Amount no longer breaks count ties.
+  assert.equal(counts.employees.find(row=>row.id===admin).targetCount,4);
+  assert.equal(counts.employees.find(row=>row.id===admin).achievement,25);
+  assert.equal(counts.teams.find(row=>row.id==='tv-a').targetCount,4); // Lead/member counted once.
+  assert.equal(counts.teams.find(row=>row.id==='tv-b').achievement,50);
+  f.db.prepare("DELETE FROM period_targets WHERE id='tv-target-b'").run();
+  const partial = await (await f.request('/api/admin/tv',undefined,cookie)).json();
+  assert.equal(partial.teams.find(row=>row.id==='tv-b').targetCount,null);
+  assert.equal(partial.teams.find(row=>row.id==='tv-b').achievement,null);
+  f.db.prepare("UPDATE sales SET amount_paise=10000 WHERE id='tv-1'").run();
+
   assert.equal((await f.request('/api/admin/overview')).status,401);
   assert.equal((await f.request('/api/admin/overview',undefined,'__Host-persevex_session='+employeeToken)).status,403);
   const overview = await (await f.request('/api/admin/overview',undefined,cookie)).json();
@@ -509,4 +531,299 @@ test('TV leaderboard ranks approved registrations with shared ties and excludes 
   assert.equal(historical.sales.registrationPaise,0);
   assert.equal((await f.request('/api/admin/overview?from=2026-10-13&to=2026-10-01',undefined,cookie)).status,400);
 
+});
+
+
+test('sales-count targets validate whole numbers, enforce lead scope, count approved sales and preserve edits', async () => {
+  const f=fixture();const cookie=await initialise(f);
+  async function person(email,jobRole='employee') {
+    const result=await f.request('/api/admin/accounts',{email,displayName:email,role:'employee',jobRole,password},cookie);
+    const account=(await result.json()).account;
+    const login=await f.request('/api/auth/login',{email,password});
+    return {...account,cookie:login.headers.get('set-cookie').split(';')[0]};
+  }
+  const lead=await person('count-lead@example.test','team_lead');
+  const employee=await person('count-employee@example.test');
+  const outside=await person('count-outside@example.test');
+  const team=(await (await f.request('/api/admin/teams/save',{name:'Count team',managerId:lead.id},cookie)).json()).teamId;
+  await f.request('/api/admin/teams/assign',{accountId:employee.id,teamId:team},cookie);
+  const directory = await (await f.request('/api/admin/teams',undefined,cookie)).json();
+  const listedTeam = directory.teams.find(item=>item.id===team);
+  assert.equal(listedTeam.manager.email,'count-lead@example.test');
+  assert.equal(listedTeam.manager.jobRole,'team_lead');
+  assert.equal(listedTeam.members[0].jobRole,'employee');
+
+  const body={accountId:employee.id,from:'2026-10-10',to:'2026-10-11',basis:'sales_count',count:'2',expectedRevision:0};
+  for(const count of ['0','-1','1.5','2.0','1e3','','10000000',2,null]) assert.equal((await f.request('/api/manager/targets',{...body,count},cookie)).status,400);
+  assert.equal((await f.request('/api/manager/targets',body,employee.cookie)).status,403);
+  assert.equal((await f.request('/api/manager/targets',{...body,accountId:lead.id},lead.cookie)).status,403);
+  assert.equal((await f.request('/api/manager/targets',{...body,accountId:outside.id},lead.cookie)).status,403);
+  const saved=await f.request('/api/manager/targets',body,lead.cookie);assert.equal(saved.status,200);
+  const {targetId}=await saved.json();
+  assert.equal((await f.request('/api/manager/targets',{...body,accountId:lead.id},cookie)).status,200);
+  assert.equal((await f.request('/api/manager/targets',{...body,accountId:outside.id},cookie)).status,200);
+  const filtered = await (await f.request('/api/manager/targets?from=2026-10-10&to=2026-10-11&teamId='+team,undefined,cookie)).json();
+  assert.deepEqual(filtered.people.map(p=>p.id).sort(),[employee.id,lead.id].sort());
+  assert.deepEqual(filtered.targets.map(p=>p.id).sort(),[employee.id,lead.id].sort());
+  assert.ok(filtered.teams.some(t=>t.id===team));
+  const empty = await (await f.request('/api/manager/targets?month=2026-10&teamId=missing',undefined,cookie)).json();
+  assert.equal(empty.people.length,0);assert.equal(empty.targets.length,0);
+  const leadFiltered = await (await f.request('/api/manager/targets?from=2026-10-10&to=2026-10-11&teamId=missing',undefined,lead.cookie)).json();
+  assert.deepEqual(leadFiltered.people.map(p=>p.id),[employee.id]);
+  assert.equal(leadFiltered.teams.length,0);
+  const start=Date.parse('2026-10-10T00:00:00+05:30'),end=Date.parse('2026-10-12T00:00:00+05:30');
+  const insert=f.db.prepare("INSERT INTO sales (id,submission_id,employee_id,team_id,student_name,phone,domain,note,amount_paise,status,fingerprint,created_at,overall_amount_paise) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+  for(const [id,status,time] of [['a','approved',start],['b','approved',end-1],['c','pending',start],['d','rejected',start],['e','approved',start-1],['f','approved',end]]) insert.run(id,id,employee.id,team,'Student','9876543210','Finance','',10000,status,'x',time,null);
+  async function progress(){return (await (await f.request('/api/employee/performance?from=2026-10-10&to=2026-10-11',undefined,employee.cookie)).json());}
+  const result=await progress();
+  assert.equal(result.performance.targetPaise,null);assert.equal(result.performance.targetCount,2);
+  assert.equal(result.performance.targetValue,2);assert.equal(result.performance.achievedValue,2);
+  assert.equal(result.performance.achievement,100);assert.equal(result.targets[0].remainingValue,0);
+  assert.equal((await f.request('/api/manager/targets',{...body,targetId,count:'1',expectedRevision:1},lead.cookie)).status,200);
+  assert.equal((await progress()).targets[0].achievement,200);
+  assert.equal((await f.request('/api/manager/targets',{...body,targetId,count:'3',expectedRevision:1},cookie)).status,409);
+  assert.equal((await f.request('/api/manager/targets',{...body,targetId,basis:'registration',amount:'500',expectedRevision:2},cookie)).status,200);
+  assert.equal((await progress()).performance.achievement,40);
+  const revisions=f.db.prepare('SELECT basis,target_count,amount_paise FROM period_target_revisions WHERE target_id=? ORDER BY revision').all(targetId);
+  assert.deepEqual(revisions.map(r=>[r.basis,r.target_count,r.amount_paise]),[['sales_count',2,null],['sales_count',1,null],['registration',null,50000]]);
+  new Organisation(f.ctx,f.env);
+  assert.equal((await progress()).performance.targetPaise,50000);
+});
+
+test('v7 money targets migrate to v8 with audit history and foreign keys intact', () => {
+  const f=fixture(db=>{
+    db.exec(`PRAGMA foreign_keys=ON;
+      CREATE TABLE app_metadata (key TEXT PRIMARY KEY,value TEXT NOT NULL);
+      INSERT INTO app_metadata VALUES ('schema_version','7');
+      CREATE TABLE accounts (id TEXT PRIMARY KEY,email TEXT NOT NULL UNIQUE,display_name TEXT NOT NULL,password_hash TEXT NOT NULL,role TEXT NOT NULL,active INTEGER NOT NULL,must_change_password INTEGER NOT NULL,created_at INTEGER NOT NULL,job_role TEXT NOT NULL);
+      INSERT INTO accounts VALUES ('legacy','legacy@example.test','Legacy','unused','employee',1,0,0,'employee');
+      CREATE TABLE period_targets (id TEXT PRIMARY KEY,account_id TEXT NOT NULL REFERENCES accounts(id),from_date TEXT NOT NULL,to_date TEXT NOT NULL,starts_at INTEGER NOT NULL,ends_at INTEGER NOT NULL,basis TEXT NOT NULL CHECK(basis IN ('registration','overall')),amount_paise INTEGER NOT NULL,revision INTEGER NOT NULL,updated_by TEXT NOT NULL REFERENCES accounts(id),updated_at INTEGER NOT NULL);
+      INSERT INTO period_targets VALUES ('old','legacy','2026-10-01','2026-10-31',1,2,'overall',50000,2,'legacy',10);
+      CREATE TABLE period_target_revisions (id TEXT PRIMARY KEY,target_id TEXT NOT NULL REFERENCES period_targets(id),account_id TEXT NOT NULL,from_date TEXT NOT NULL,to_date TEXT NOT NULL,basis TEXT NOT NULL,amount_paise INTEGER NOT NULL,revision INTEGER NOT NULL,actor_id TEXT NOT NULL,recorded_at INTEGER NOT NULL,UNIQUE(target_id,revision));
+      INSERT INTO period_target_revisions VALUES ('r1','old','legacy','2026-10-01','2026-10-31','registration',25000,1,'legacy',5);
+      INSERT INTO period_target_revisions VALUES ('r2','old','legacy','2026-10-01','2026-10-31','overall',50000,2,'legacy',10);`);
+  });
+  assert.equal(f.object.health().schemaVersion,11);
+  const target=f.db.prepare('SELECT * FROM period_targets').get();
+  assert.equal(target.amount_paise,50000);assert.equal(target.target_count,null);assert.equal(target.revision,2);
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM period_target_revisions').get().n,2);
+  assert.deepEqual(f.db.prepare('PRAGMA foreign_key_check').all(),[]);
+  new Organisation(f.ctx,f.env);
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM period_targets').get().n,1);
+});
+
+
+async function paymentWebhook(f, payload, options={}) {
+  const raw = options.raw ?? JSON.stringify(payload);
+  const timestamp = options.timestamp ?? String(Date.now());
+  const secret = options.secret ?? f.env.CASHFREE_WEBHOOK_SECRET ?? 'test-cashfree-secret';
+  const key = await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  const signature = Buffer.from(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(timestamp+raw))).toString('base64');
+  return worker.fetch(new Request('https://example.test/api/webhooks/cashfree',{
+    method:'POST',headers:{'Content-Type':'application/json','x-webhook-timestamp':timestamp,'x-webhook-signature':signature,...options.headers},body:options.sentRaw ?? raw
+  }),f.env);
+}
+function successPayment(id='1453995084705707520') {
+  return {type:'PAYMENT_SUCCESS_WEBHOOK',data:{
+    order:{order_id:'order-123',order_amount:3000,order_currency:'INR'},
+    payment:{cf_payment_id:id,payment_status:'SUCCESS',payment_amount:3000,payment_currency:'INR',payment_time:new Date().toISOString()},
+    customer_details:{customer_name:'Payer Example',customer_email:'payer@example.test',customer_phone:'9876543210'},
+  }};
+}
+test('Cashfree accepts signed successes once, masks TV data and notifies only authenticated admins',async()=>{
+  const f=fixture(); const cookie=await initialise(f);
+  f.env.CASHFREE_WEBHOOK_SECRET='test-cashfree-secret';f.env.CASHFREE_ENV='sandbox';
+  const created=await f.request('/api/admin/accounts',{email:'payments-employee@example.test',displayName:'Employee',role:'employee',password},cookie);
+  const employee=(await created.json()).account;
+  const login=await f.request('/api/auth/login',{email:employee.email,password});
+  const employeeCookie=login.headers.get('set-cookie').split(';')[0];
+  const adminSocket=await liveSocket(f,cookie),employeeSocket=await liveSocket(f,employeeCookie);
+  const payload=successPayment();
+  const response=await paymentWebhook(f,payload);
+  assert.equal(response.status,200);assert.equal((await response.json()).duplicate,false);
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM cashfree_payments').get().n,1);
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM sales').get().n,0);
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM collection_events').get().n,0);
+  assert.deepEqual(adminSocket.messages,[{type:'payments_changed',version:1}]);
+  assert.deepEqual(employeeSocket.messages,[]);
+  const duplicate=await paymentWebhook(f,payload,{timestamp:'1700000000000'});
+  assert.equal(duplicate.status,200);assert.equal((await duplicate.json()).duplicate,true);
+  assert.equal(adminSocket.messages.length,1);
+  const changed=structuredClone(payload);changed.data.customer_details.customer_name='Changed metadata';
+  assert.equal((await paymentWebhook(f,changed)).status,200);
+  assert.equal(f.db.prepare('SELECT payer_name FROM cashfree_payments').get().payer_name,'Payer Example');
+  changed.data.payment.payment_amount=4000;
+  assert.equal((await paymentWebhook(f,changed)).status,409);
+  const tv=await (await f.request('/api/admin/tv',undefined,cookie)).json();
+  assert.equal(tv.payments.length,1);assert.equal(tv.paymentEnvironment,'sandbox');assert.equal(tv.paymentsConfigured,true);
+  assert.equal(tv.payments[0].amountPaise,300000);assert.equal(tv.payments[0].name,'Payer Example');
+  assert.ok(!JSON.stringify(tv).includes('9876543210'));assert.ok(!JSON.stringify(tv).includes('payer@example.test'));
+  assert.equal((await f.request('/api/admin/tv',undefined,employeeCookie)).status,403);
+  f.env.CASHFREE_ENV='production';
+  assert.equal((await (await f.request('/api/admin/tv',undefined,cookie)).json()).payments.length,0);
+  assert.equal((await paymentWebhook(f,payload)).status,200);
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM cashfree_payments').get().n,2);
+  const restored=new Organisation(f.ctx,f.env);
+  restored.webSocketMessage(adminSocket,'sync');assert.equal(adminSocket.messages.at(-1).version,2);
+  f.db.prepare('UPDATE sessions SET expires_at=0').run();
+  assert.equal((await paymentWebhook(f,successPayment('new-after-expiry'))).status,200);
+  assert.equal(adminSocket.closeCode,4401);assert.equal(employeeSocket.messages.length,0);
+});
+test('Cashfree rejects forged, malformed and oversized deliveries before persistence',async()=>{
+  const f=fixture();const payload=successPayment();
+  assert.equal((await paymentWebhook(f,payload)).status,503);
+  f.env.CASHFREE_ENV='sandbox';f.env.CASHFREE_WEBHOOK_SECRET='test-cashfree-secret';
+  assert.equal((await worker.fetch(new Request('https://example.test/api/webhooks/cashfree'),f.env)).status,405);
+  assert.equal((await paymentWebhook(f,payload,{secret:'wrong-secret'})).status,401);
+  const binding=f.env.ORGANISATION;
+  f.env.ORGANISATION={getByName(){throw new Error('Unauthenticated request reached storage');}};
+  assert.equal((await paymentWebhook(f,payload,{secret:'wrong-secret'})).status,401);
+  f.env.ORGANISATION=binding;
+  assert.equal((await paymentWebhook(f,payload,{sentRaw:JSON.stringify(payload).replace('3000','3001')})).status,401);
+
+  assert.equal((await paymentWebhook(f,payload,{headers:{'x-webhook-signature':''}})).status,401);
+  assert.equal((await paymentWebhook(f,payload,{timestamp:String(Date.now()+600000)})).status,401);
+  assert.equal((await paymentWebhook(f,payload,{raw:'{invalid'})).status,400);
+  assert.equal((await paymentWebhook(f,payload,{headers:{'Content-Type':'text/plain'}})).status,415);
+  assert.equal((await paymentWebhook(f,payload,{raw:' '.repeat(65537)})).status,413);
+  assert.equal((await paymentWebhook(f,payload,{headers:{'Content-Length':'70000'}})).status,413);
+  for(const [field,value] of [['payment_status','FAILED'],['payment_currency','USD'],['payment_amount',-1],['payment_amount',1.001],['cf_payment_id',9007199254740992],['payment_time','not-a-date'],['payment_time','2026-02-31T12:00:00Z']]) {
+    const bad=structuredClone(payload);bad.data.payment[field]=value;assert.equal((await paymentWebhook(f,bad)).status,400);
+  }
+  const ignored=structuredClone(payload);ignored.type='PAYMENT_FAILED_WEBHOOK';ignored.data.payment.payment_status='FAILED';
+  assert.equal((await paymentWebhook(f,ignored)).status,200);
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM cashfree_payments').get().n,0);
+  assert.equal(f.db.prepare("SELECT value FROM app_metadata WHERE key='sales_version'").get().value,'0');
+  // The HMAC covers original decimal spelling and whitespace, not reserialized JSON.
+  const raw=JSON.stringify(payload).replace('"payment_amount":3000','"payment_amount":3000.00');
+  assert.equal((await paymentWebhook(f,payload,{raw})).status,200);
+});
+test('Cashfree persistence failures are retryable and concurrent duplicates commit once',async()=>{
+  const f=fixture();f.env.CASHFREE_ENV='sandbox';f.env.CASHFREE_WEBHOOK_SECRET='test-cashfree-secret';
+  const payload=successPayment();
+  const exec=f.storage.sql.exec;
+  f.storage.sql.exec=(query,...args)=>{if(query.startsWith('INSERT INTO cashfree_payments'))throw new Error('disk error');return exec(query,...args);};
+  assert.equal((await paymentWebhook(f,payload)).status,503);
+  f.storage.sql.exec=exec;
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM cashfree_payments').get().n,0);
+  assert.equal(f.db.prepare("SELECT value FROM app_metadata WHERE key='sales_version'").get().value,'0');
+  const responses=await Promise.all([paymentWebhook(f,payload),paymentWebhook(f,payload)]);
+  assert.ok(responses.every(response=>response.status===200));
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM cashfree_payments').get().n,1);
+  assert.equal(f.db.prepare("SELECT value FROM app_metadata WHERE key='sales_version'").get().value,'1');
+});
+
+
+test('unsigned mode is explicit, unverified and cannot bypass a configured signature key',async()=>{
+  const f=fixture();f.env.CASHFREE_ENV='sandbox';f.env.CASHFREE_ALLOW_UNSIGNED='true';
+  const payload=successPayment();
+  const send=()=>worker.fetch(new Request('https://example.test/api/webhooks/cashfree',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),f.env);
+  assert.equal((await send()).status,200);
+  assert.equal(f.db.prepare('SELECT verified FROM cashfree_payments').get().verified,0);
+  assert.equal((await send()).status,200);
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM cashfree_payments').get().n,1);
+  f.env.CASHFREE_WEBHOOK_SECRET='test-cashfree-secret';
+  assert.equal((await send()).status,401);
+  payload.data.payment.payment_amount=4000;
+  assert.equal((await paymentWebhook(f,payload)).status,200);
+  const record=f.db.prepare('SELECT * FROM cashfree_payments').get();
+  assert.equal(record.verified,1);assert.equal(record.amount_paise,400000);
+  delete f.env.CASHFREE_WEBHOOK_SECRET;
+  payload.data.payment.payment_amount=5000;
+  assert.equal((await send()).status,409);
+  assert.equal(f.db.prepare('SELECT amount_paise FROM cashfree_payments').get().amount_paise,400000);
+});
+
+
+test('admin team deletion ends current assignments atomically and preserves historical sales',async()=>{
+  const f=fixture();const cookie=await initialise(f);
+  async function person(email,jobRole){const created=await f.request('/api/admin/accounts',{email,displayName:email,role:'employee',jobRole,password},cookie);const account=(await created.json()).account;const login=await f.request('/api/auth/login',{email,password});return {...account,cookie:login.headers.get('set-cookie').split(';')[0]};}
+  const lead=await person('delete-lead@example.test','team_lead'),employee=await person('delete-employee@example.test','employee');
+  const team=(await (await f.request('/api/admin/teams/save',{name:'Delete team',managerId:lead.id},cookie)).json()).teamId;
+  await f.request('/api/admin/teams/assign',{accountId:employee.id,teamId:team},cookie);
+  const sale=(await (await f.request('/api/employee/sales',{submissionId:crypto.randomUUID(),teamId:team,studentName:'Historical student',phone:'9876543210',amount:'100',overallAmount:'1000',domain:'Finance',note:''},employee.cookie)).json()).sale;
+  assert.equal((await f.request('/api/admin/teams/delete',{teamId:team},employee.cookie)).status,403);
+  assert.equal((await f.request('/api/admin/teams/delete',{teamId:team},lead.cookie)).status,403);
+  const exec=f.storage.sql.exec;
+  f.storage.sql.exec=(query,...args)=>{if(query.startsWith('UPDATE manager_assignments SET ends_at=?'))throw new Error('test rollback');return exec(query,...args);};
+  assert.equal((await f.request('/api/admin/teams/delete',{teamId:team},cookie)).status,503);
+  f.storage.sql.exec=exec;
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM deleted_teams').get().n,0);
+  assert.equal(f.db.prepare('SELECT ends_at FROM team_memberships WHERE team_id=?').get(team).ends_at,null);
+  const socket=await liveSocket(f,employee.cookie);
+  assert.equal((await f.request('/api/admin/teams/delete',{teamId:team},cookie)).status,200);
+  assert.ok(f.db.prepare('SELECT ends_at FROM team_memberships WHERE team_id=?').get(team).ends_at);
+  assert.ok(f.db.prepare('SELECT ends_at FROM manager_assignments WHERE team_id=?').get(team).ends_at);
+  assert.ok(socket.messages.some(event=>event.type==='access_changed'));
+  const directory=await (await f.request('/api/admin/teams',undefined,cookie)).json();assert.equal(directory.teams.length,0);
+  const context=await (await f.request('/api/employee/sales/context',undefined,employee.cookie)).json();assert.equal(context.teams.length,0);
+  assert.equal((await f.request('/api/admin/teams/assign',{accountId:employee.id,teamId:team},cookie)).status,404);
+  assert.equal((await f.request('/api/admin/teams/save',{teamId:team,name:'Revive',managerId:lead.id},cookie)).status,404);
+  assert.equal((await f.request('/api/manager/sales/review',{saleId:sale.id,status:'approved'},lead.cookie)).status,403);
+  assert.equal((await f.request('/api/manager/sales/review',{saleId:sale.id,status:'approved'},cookie)).status,200);
+  assert.equal(f.db.prepare('SELECT team_id FROM sales WHERE id=?').get(sale.id).team_id,team);
+  const history=await (await f.request('/api/employee/sales',undefined,employee.cookie)).json();assert.equal(history.sales[0].teamName,'Delete team');
+  assert.equal((await f.request('/api/admin/teams/delete',{teamId:team},cookie)).status,200);
+  assert.equal(f.db.prepare("SELECT COUNT(*) AS n FROM auth_audit WHERE action='team_deleted'").get().n,1);
+  assert.equal((await f.request('/api/admin/teams/save',{name:'Delete team',managerId:lead.id},cookie)).status,201);
+  assert.equal((await f.request('/api/admin/teams/delete',{teamId:'missing'},cookie)).status,404);
+});
+
+test('people directory filters current team members and leads before pagination', async () => {
+  const f = fixture();
+  const cookie = await initialise(f);
+  async function create(email, jobRole) {
+    const response = await f.request('/api/admin/accounts', { email, displayName: email, role: 'employee', jobRole, password }, cookie);
+    assert.equal(response.status, 201);
+    return (await response.json()).account.id;
+  }
+  const lead = await create('directory-lead@example.test', 'team_lead');
+  const employee = await create('directory-employee@example.test', 'business_development_executive');
+  const teamId = (await (await f.request('/api/admin/teams/save', { name: 'Directory team', managerId: lead }, cookie)).json()).teamId;
+  await f.request('/api/admin/teams/assign', { accountId: employee, teamId }, cookie);
+  const secondId = (await (await f.request('/api/admin/teams/save', { name: 'Second team', managerId: lead }, cookie)).json()).teamId;
+  const roster = await (await f.request(`/api/admin/accounts?teamId=${teamId}`, undefined, cookie)).json();
+  assert.equal(roster.total, 2);
+  assert.deepEqual(new Set(roster.accounts.map(a => a.id)), new Set([lead, employee]));
+  assert.equal(roster.accounts.find(a => a.id === lead).teams.length, 2);
+  assert.deepEqual(roster.accounts.find(a => a.id === employee).teams, [{ id: teamId, name: 'Directory team' }]);
+  assert.equal(roster.teams.length, 2);
+  const filtered = await (await f.request(`/api/admin/accounts?teamId=${secondId}&jobRole=business_development_executive`, undefined, cookie)).json();
+  assert.equal(filtered.total, 0);
+  assert.equal((await (await f.request('/api/admin/accounts?teamId=unknown', undefined, cookie)).json()).total, 0);
+  await f.request('/api/admin/teams/delete', { teamId }, cookie);
+  const archived = await (await f.request(`/api/admin/accounts?teamId=${teamId}`, undefined, cookie)).json();
+  assert.equal(archived.total, 0);
+  assert.equal(archived.teams.length, 1);
+});
+
+test('admin custom-period sales reset preserves records and clears approved progress', async () => {
+  const f = fixture();
+  const cookie = await initialise(f);
+  const response = await f.request('/api/admin/accounts', { email: 'reset-sales@example.test', displayName: 'Seller', role: 'employee', password }, cookie);
+  const employee = (await response.json()).account;
+  const login = await f.request('/api/auth/login', { email: employee.email, password });
+  const employeeCookie = login.headers.get('set-cookie').split(';')[0];
+  const teamId = (await (await f.request('/api/admin/teams/save', { name: 'Reset team', managerId: '' }, cookie)).json()).teamId;
+  await f.request('/api/admin/teams/assign', { accountId: employee.id, teamId }, cookie);
+  const saleResponse = await f.request('/api/employee/sales', { submissionId: crypto.randomUUID(), studentName: 'Reset student', phone: '9876543210', amount: '100', overallAmount: '500', domain: 'Finance', teamId }, employeeCookie);
+  const sale = (await saleResponse.json()).sale;
+  await f.request('/api/manager/sales/review', { saleId: sale.id, status: 'approved' }, cookie);
+  const range = { from: '2026-01-01', to: '2026-01-31', accountId: employee.id };
+  f.db.prepare('UPDATE sales SET created_at=? WHERE id=?').run(Date.parse('2026-01-15T00:00:00Z'), sale.id);
+  assert.equal((await f.request('/api/admin/accounts/reset-sales', range, employeeCookie)).status, 403);
+  const reset = await f.request('/api/admin/accounts/reset-sales', range, cookie);
+  assert.equal(reset.status, 200);
+  assert.equal((await reset.json()).resetCount, 1);
+  assert.equal(f.db.prepare('SELECT status FROM sales WHERE id=?').get(sale.id).status, 'rejected');
+  assert.equal(f.db.prepare("SELECT COUNT(*) AS n FROM auth_audit WHERE action='sale_reset'").get().n, 1);
+  assert.equal((await (await f.request('/api/admin/accounts/reset-sales', range, cookie)).json()).resetCount, 0);
+  assert.equal((await f.request('/api/manager/sales/review', { saleId: sale.id, status: 'approved' }, cookie)).status, 409);
+  const target = { accountId: employee.id, from: range.from, to: range.to, basis: 'registration', amount: '1000' };
+  const saved = await (await f.request('/api/manager/targets', target, cookie)).json();
+  const edited = await f.request('/api/manager/targets', { ...target, basis: 'sales_count', count: '30', targetId: saved.targetId, expectedRevision: saved.revision }, cookie);
+  assert.equal(edited.status, 200);
+  const progress = await (await f.request('/api/employee/performance?from=2026-01-01&to=2026-01-31', undefined, employeeCookie)).json();
+  assert.equal(progress.performance.approvedCount, 0);
+  assert.equal(progress.targets[0].targetCount, 30);
 });

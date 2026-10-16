@@ -1,10 +1,13 @@
 "use client";
+import { useState } from "react";
+import { LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Account } from "../../lib/api";
 import type { PeopleDirectory } from "../../hooks/use-people-directory";
 import { PageHeading } from "../layout/page-heading";
 import { PeopleFilters } from "./people-filters";
 import { PeopleTable } from "./people-table";
+import { PeopleGrid } from "./people-grid";
 import { ListPagination } from "../layout/list-pagination";
 import { PeopleStats } from "./people-stats";
 export function PeoplePanel({
@@ -15,6 +18,7 @@ export function PeoplePanel({
   directory: PeopleDirectory;
   statusMessage: string;
 }) {
+  const [view, setView] = useState<"list" | "grid">("list");
   const {
     roster,
     loading,
@@ -25,6 +29,7 @@ export function PeoplePanel({
     role,
     jobRole,
     status,
+    teamId,
     page,
     setPage,
   } = directory;
@@ -48,27 +53,64 @@ export function PeoplePanel({
             <h2 id="roster-title">People directory</h2>
             <p>Your workspace accounts and their access levels.</p>
           </div>
-          <Button className="button ghost" onClick={refresh} disabled={loading}>
-            {loading ? "Loading…" : "↻ Refresh"}
-          </Button>
+          <div className="people-directory-actions">
+            <div
+              className="people-view-toggle"
+              role="group"
+              aria-label="Employee directory view"
+            >
+              <Button
+                variant={view === "list" ? "default" : "outline"}
+                aria-pressed={view === "list"}
+                onClick={() => setView("list")}
+              >
+                <List size={16} />
+                List
+              </Button>
+              <Button
+                variant={view === "grid" ? "default" : "outline"}
+                aria-pressed={view === "grid"}
+                onClick={() => setView("grid")}
+              >
+                <LayoutGrid size={16} />
+                Grid
+              </Button>
+            </div>
+            <Button
+              className="button ghost"
+              onClick={refresh}
+              disabled={loading}
+            >
+              {loading ? "Loading…" : "↻ Refresh"}
+            </Button>
+          </div>
         </div>
         <PeopleFilters directory={directory} />
-        <PeopleTable
-          accounts={roster?.accounts ?? []}
-          currentAccountId={account.id}
-          loading={loading}
-          open={open}
-        />
+        {view === "list" ? (
+          <PeopleTable
+            accounts={roster?.accounts ?? []}
+            currentAccountId={account.id}
+            loading={loading}
+            open={open}
+          />
+        ) : (
+          <PeopleGrid
+            accounts={roster?.accounts ?? []}
+            currentAccountId={account.id}
+            loading={loading}
+            open={open}
+          />
+        )}
         {!loading && !error && !roster?.accounts.length && (
           <div className="empty-state">
             <span>◎</span>
             <h3>
-              {search || role !== "all" || jobRole !== "all" || status !== "all"
+              {teamId || search || role !== "all" || jobRole !== "all" || status !== "all"
                 ? "No matching accounts"
                 : "Your team starts here"}
             </h3>
             <p>
-              {search || role !== "all" || jobRole !== "all" || status !== "all"
+              {teamId || search || role !== "all" || jobRole !== "all" || status !== "all"
                 ? "Try a different search or filter."
                 : "Add your first employee to give them access to the workspace."}
             </p>

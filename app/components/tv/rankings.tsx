@@ -1,25 +1,29 @@
 "use client";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, Trophy } from "lucide-react";
-import { money } from "../sales/types";
 
 export type Standing = {
   id: string;
   name: string;
-  amountPaise: number;
+  targetCount: number | null;
+  achievement: number | null;
   salesCount: number;
   rank: number;
 };
-const ROWS = 5;
+const ROWS = 7;
 
 export function Rankings({
   title,
   rows,
   cycle,
+  controls,
+  status,
 }: {
   title: string;
   rows: Standing[];
   cycle: number;
+  controls?: ReactNode;
+  status?: string;
 }) {
   const list = useRef<HTMLDivElement>(null);
   const previous = useRef<{
@@ -135,14 +139,13 @@ export function Rankings({
     <section className="tv-rankings">
       <div className="tv-section-title">
         <h2>{title}</h2>
-        <span>
-          {page + 1} / {pages}
-        </span>
+        {controls}
       </div>
       <div className="tv-ranking-labels">
         <span>Rank / Name</span>
+        <span>Target</span>
         <span>Sales</span>
-        <span>Registration</span>
+        <span>Achieved</span>
       </div>
       <div className="tv-ranking-tiles" ref={list}>
         {rows.slice(page * ROWS, (page + 1) * ROWS).map((row) => (
@@ -165,10 +168,40 @@ export function Rankings({
                 <ArrowDown className="tv-movement-down" aria-hidden="true" />
               </span>
             </div>
+            <span className="tv-target-count">
+              {row.targetCount ?? "Not set"}
+            </span>
             <span>{row.salesCount}</span>
-            <strong>{money(row.amountPaise)}</strong>
+            <div className="tv-achievement">
+              <strong>
+                {row.achievement === null
+                  ? "—"
+                  : `${Math.round(row.achievement)}%`}
+              </strong>
+              {row.achievement !== null && (
+                <span
+                  className="tv-achievement-track"
+                  role="meter"
+                  aria-label={`${row.name} target achievement`}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.min(100, row.achievement)}
+                  aria-valuetext={`${row.achievement.toFixed(1)}%`}
+                >
+                  <span
+                    style={{ width: `${Math.min(100, row.achievement)}%` }}
+                  />
+                </span>
+              )}
+            </div>
           </div>
         ))}
+      </div>
+      <div className="tv-panel-status">
+        <span role="status">{status}</span>
+        <span>
+          {page + 1} / {pages}
+        </span>
       </div>
       {!rows.length && (
         <p className="tv-empty">

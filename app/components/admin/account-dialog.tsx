@@ -1,4 +1,7 @@
 "use client";
+import { useState } from "react";
+import { monthDates } from "../../../shared/targets";
+import { DatePicker } from "../forms/date-picker";
 import { FormSelect, SelectOption } from "../forms/form-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +11,7 @@ import { WorkspaceDialog } from "../layout/workspace-dialog";
 import type { PeopleDirectory } from "../../hooks/use-people-directory";
 import { ACCOUNT_ACTION_TITLES } from "./types";
 export function AccountDialog({ directory }: { directory: PeopleDirectory }) {
+  const [resetRange, setResetRange] = useState(() => monthDates());
   const { selection, busy, setSelection, mutate } = directory;
   if (!selection) return null;
   return (
@@ -20,6 +24,14 @@ export function AccountDialog({ directory }: { directory: PeopleDirectory }) {
       }}
     >
       <form onSubmit={mutate} className="account-form">
+        {selection.action === "resetSales" && <>
+          <p className="notice warning">Reset {selection.account?.displayName}&apos;s sales for these dates? Existing sales will be marked rejected and removed from totals, target progress and rankings. Records stay in history. New sales are unaffected.</p>
+          <input type="hidden" name="from" value={resetRange.from} />
+          <input type="hidden" name="to" value={resetRange.to} />
+          <Label>From (IST)<DatePicker value={resetRange.from} onChange={e => setResetRange(r => ({ from: e.target.value, to: e.target.value > r.to ? e.target.value : r.to }))} /></Label>
+          <Label>To (inclusive)<DatePicker value={resetRange.to} min={resetRange.from} onChange={e => setResetRange(r => ({ ...r, to: e.target.value }))} /></Label>
+          <Label className="flex items-center gap-2"><input type="checkbox" required /> I confirm this sales reset.</Label>
+        </>}
         {(selection.action === "create" || selection.action === "edit") && (
           <>
             <Label>

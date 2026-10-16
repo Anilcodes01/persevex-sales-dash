@@ -2,6 +2,7 @@ import type { Account } from "../types";
 import type { AuthStore } from "../storage/auth-store";
 import { teamDirectory } from "../storage/teams-store";
 import { HttpError, json } from "../http/helpers";
+import { advanceSalesVersion } from "../storage/sales-store";
 
 export function listTeams(store: AuthStore) {
   return json(teamDirectory(store));
@@ -23,7 +24,10 @@ export function saveTeam(
       : crypto.randomUUID();
   const existing =
     store.storage.sql
-      .exec("SELECT id FROM teams WHERE id = ?", teamId)
+      .exec(
+        "SELECT id FROM teams WHERE id = ? AND id NOT IN (SELECT team_id FROM deleted_teams)",
+        teamId,
+      )
       .toArray().length > 0;
   if (body.teamId && !existing) throw new HttpError(404, "Team not found");
   const key = name.toLowerCase();
@@ -104,7 +108,10 @@ export function assignEmployee(
   if (body.teamId) {
     if (
       !store.storage.sql
-        .exec("SELECT id FROM teams WHERE id = ?", body.teamId)
+        .exec(
+          "SELECT id FROM teams WHERE id = ? AND id NOT IN (SELECT team_id FROM deleted_teams)",
+          body.teamId,
+        )
         .toArray().length
     )
       throw new HttpError(404, "Team not found");
@@ -149,5 +156,64 @@ export function assignEmployee(
       body.accountId as string,
     );
   });
+  return json({ ok: true });
+}
+
+export function deleteTeam(
+  body: Record<string, unknown>,
+  actor: Account,
+  store: AuthStore,
+) {
+  if (typeof body.teamId !== "string" || !body.teamId)
+    throw new HttpError(400, "Select a team");
+  const id = body.teamId;
+  if (
+    !store.storage.sql.exec("SELECT id FROM teams WHERE id=?", id).toArray()
+      .length
+  )
+    throw new HttpError(404, "Team not found");
+  if (
+    store.storage.sql
+      .exec("SELECT team_id FROM deleted_teams WHERE team_id=?", id)
+      .toArray().length
+  )
+    return json({ ok: true });
+  const people = store.storage.sql
+    .exec<{ id: string }>(
+      "SELECT account_id AS id FROM team_memberships WHERE team_id=? AND ends_at IS NULL UNION SELECT account_id FROM manager_assignments WHERE team_id=? AND ends_at IS NULL",
+      id,
+      id,
+    )
+    .toArray();
+  const now = Date.now();
+  let version = 0;
+  store.storage.transactionSync(() => {
+    store.storage.sql.exec(
+      "INSERT INTO deleted_teams VALUES (?,?,?)",
+      id,
+      now,
+      actor.id,
+    );
+    store.storage.sql.exec(
+      "UPDATE team_memberships SET ends_at=? WHERE team_id=? AND ends_at IS NULL",
+      now,
+      id,
+    );
+    store.storage.sql.exec(
+      "UPDATE manager_assignments SET ends_at=? WHERE team_id=? AND ends_at IS NULL",
+      now,
+      id,
+    );
+    // Keep the historical display name while freeing it for a new active team.
+    store.storage.sql.exec(
+      "UPDATE teams SET name_key=? WHERE id=?",
+      `deleted:${id}`,
+      id,
+    );
+    store.audit(actor.id, "team_deleted", id);
+    version = advanceSalesVersion(store);
+  });
+  for (const person of people.length ? people : [{ id: "" }])
+    store.onSalesChanged?.({ employeeId: person.id, teamId: id, version });
   return json({ ok: true });
 }

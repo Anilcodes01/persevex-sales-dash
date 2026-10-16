@@ -1,6 +1,7 @@
 import type { Env } from "./types";
 import { json } from "./http/helpers";
 import { isAllowedRequestOrigin } from "./security/request-origin";
+import { cashfreeWebhook } from "./payments/cashfree-webhook";
 
 // Cloudflare requires the Durable Object class to be exported from this entrypoint.
 export { Organisation } from "./durable-objects/organisation";
@@ -8,6 +9,8 @@ export { Organisation } from "./durable-objects/organisation";
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    if (url.pathname === "/api/webhooks/cashfree")
+      return cashfreeWebhook(request, env);
     if (
       url.pathname.startsWith("/api/auth/") ||
       url.pathname.startsWith("/api/admin/") ||

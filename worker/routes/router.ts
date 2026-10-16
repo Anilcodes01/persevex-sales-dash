@@ -1,3 +1,4 @@
+import { resetEmployeeSales } from "./reset-sales";
 import type { Env } from "../types";
 import { AuthStore } from "../storage/auth-store";
 import { digest, readSession, sessionCookie } from "../security/credentials";
@@ -11,7 +12,7 @@ import {
   updateAccount,
   enableAccount,
 } from "./accounts";
-import { listTeams, saveTeam, assignEmployee } from "./teams";
+import { listTeams, saveTeam, assignEmployee, deleteTeam } from "./teams";
 import { employeeTeam } from "../storage/teams-store";
 import { salesContext, listSales, submitSale, reviewSale } from "./sales";
 import { ownPerformance, listTargets, saveTarget } from "./targets";
@@ -93,7 +94,7 @@ export async function routeOrganisationRequest(
   }
   if (path === "/api/admin/tv" && request.method === "GET") {
     requireAdministrator(store.accountForSession(tokenHash));
-    return tvLeaderboard(store);
+    return tvLeaderboard(store, env);
   }
   if (path === "/api/admin/overview" && request.method === "GET") {
     requireAdministrator(store.accountForSession(tokenHash));
@@ -143,6 +144,10 @@ export async function routeOrganisationRequest(
   requireAdministrator(actor);
 
   switch (path) {
+    case "/api/admin/accounts/reset-sales":
+      return resetEmployeeSales(body, actor, store);
+    case "/api/admin/teams/delete":
+      return deleteTeam(body, actor, store);
     case "/api/admin/teams/save":
       return saveTeam(body, actor, store);
     case "/api/admin/teams/assign":

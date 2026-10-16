@@ -2,7 +2,7 @@ import type { AuthStore } from "./auth-store";
 export function teamDirectory(store: AuthStore) {
   const teams = store.storage.sql
     .exec<{ id: string; name: string; createdAt: number }>(
-      "SELECT id, name, created_at AS createdAt FROM teams ORDER BY name_key",
+      "SELECT id, name, created_at AS createdAt FROM teams WHERE id NOT IN (SELECT team_id FROM deleted_teams) ORDER BY name_key",
     )
     .toArray();
   const members = store.storage.sql
@@ -11,15 +11,23 @@ export function teamDirectory(store: AuthStore) {
       displayName: string;
       email: string;
       active: number;
+      jobRole: string;
       teamId: string;
     }>(
-      `SELECT a.id, a.display_name AS displayName, a.email, a.active, m.team_id AS teamId
+      `SELECT a.id, a.display_name AS displayName, a.email, a.active, a.job_role AS jobRole, m.team_id AS teamId
     FROM team_memberships m JOIN accounts a ON a.id = m.account_id WHERE m.ends_at IS NULL AND a.role = 'employee' ORDER BY a.display_name`,
     )
     .toArray();
   const managers = store.storage.sql
-    .exec<{ id: string; displayName: string; active: number; teamId: string }>(
-      `SELECT a.id, a.display_name AS displayName, a.active, m.team_id AS teamId
+    .exec<{
+      id: string;
+      displayName: string;
+      email: string;
+      jobRole: string;
+      active: number;
+      teamId: string;
+    }>(
+      `SELECT a.id, a.display_name AS displayName, a.email, a.job_role AS jobRole, a.active, m.team_id AS teamId
     FROM manager_assignments m JOIN accounts a ON a.id = m.account_id WHERE m.ends_at IS NULL `,
     )
     .toArray();

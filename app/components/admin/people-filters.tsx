@@ -1,4 +1,5 @@
 "use client";
+import { SearchableSelect } from "../forms/searchable-select";
 import { FormSelect, SelectOption } from "../forms/form-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,9 @@ import { JOB_ROLES } from "../../../shared/roles";
 import type { PeopleDirectory } from "../../hooks/use-people-directory";
 export function PeopleFilters({ directory }: { directory: PeopleDirectory }) {
   const {
+    teamId,
+    setTeamId,
+    roster,
     query,
     setQuery,
     setSearch,
@@ -43,6 +47,13 @@ export function PeopleFilters({ directory }: { directory: PeopleDirectory }) {
           ⌕
         </Button>
       </form>
+      <SearchableSelect
+        label="Team"
+        allLabel="All teams"
+        value={teamId}
+        onChange={(value) => { setTeamId(value); setPage(1); }}
+        options={(roster?.teams ?? []).map((team) => ({ value: team.id, label: team.name }))}
+      />
       <Label className="sr-only" htmlFor="role-filter">
         Filter role
       </Label>
