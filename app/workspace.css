@@ -1748,9 +1748,6 @@ select {
 .avatar-upload-circle .avatar-camera-badge svg { display: block; flex-shrink: 0; }
 .edit-account-dialog .avatar-upload-caption { min-width: 0; align-self: center; }
 
-.sales-sound-control { display: inline-flex; align-items: center; gap: 8px; }
-.sales-sound-control input[type="range"] { width: 70px; accent-color: var(--primary); }
-@media (max-width: 600px) { .sales-sound-control input[type="range"] { width: 44px; } }
 
 .history-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
 .payment-history-note { padding: 0 24px 16px; font-size: 14px; color: var(--muted-foreground); }

@@ -85,8 +85,6 @@ export function TvLeaderboard({
   }, [refresh]);
   return (
     <main className="tv-display">
-      <FullscreenButton />
-      <SalesSoundControl key={account.id} accountId={account.id} floating />
       <Rankings
         key={`${view}:${data?.period.from ?? "loading"}`}
         title="Sales performance"
@@ -127,6 +125,10 @@ export function TvLeaderboard({
         environment={data?.paymentEnvironment ?? null}
         configured={data?.paymentsConfigured ?? false}
         loading={!data}
+        controls={<>
+          <SalesSoundControl key={account.id} accountId={account.id} expanded />
+          <FullscreenButton />
+        </>}
       />
     </main>
   );

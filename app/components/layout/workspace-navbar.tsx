@@ -21,7 +21,7 @@ export function WorkspaceNavbar({
       </div>
       <div className="navbar-actions">
         {action}
-        {(accountProps.account.role === "admin" || accountProps.account.jobRole === "team_lead") && <SalesSoundControl accountId={accountProps.account.id} />}
+        {(accountProps.account.role === "admin" || accountProps.account.jobRole === "team_lead") && <SalesSoundControl accountId={accountProps.account.id} expanded />}
         <div className="desktop-account-menu"><AccountMenu {...accountProps} /></div>
         <MobileAccountPanel {...accountProps} />
       </div>

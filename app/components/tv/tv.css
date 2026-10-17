@@ -292,10 +292,7 @@
   }
 }
 .tv-fullscreen-button {
-  position: fixed;
-  right: max(20px, env(safe-area-inset-right));
-  bottom: max(20px, env(safe-area-inset-bottom));
-  z-index: 50;
+  flex-shrink: 0;
   width: 44px;
   height: 44px;
   background: var(--background);
@@ -393,3 +390,23 @@
 
 .tv-sound-control { position: fixed; bottom: 20px; right: 80px; z-index: 40; display: flex; align-items: center; gap: 8px; background: var(--background); padding: 4px; border: 1px solid var(--border); }
 .tv-sound-control input[type="range"] { width: 72px; accent-color: var(--primary); }
+
+.tv-payments .tv-section-title { flex-wrap: wrap; }
+.tv-payment-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+.tv-payment-controls input[type="range"] { width: 80px; accent-color: var(--primary); }
+@media (max-width: 600px) {
+  .tv-payment-controls { justify-content: flex-start; }
+}
+
+/* Fullscreen matches the shared volume control. */
+.tv-payment-controls .tv-fullscreen-button {
+  border: 0;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--primary) 85%, transparent);
+  color: var(--primary-foreground);
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+}
+.tv-payment-controls .tv-fullscreen-button:hover {
+  background: color-mix(in srgb, var(--primary-hover) 90%, transparent);
+}

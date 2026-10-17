@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { money } from "../sales/types";
 export type PaymentRow = {
   paymentId: string;
@@ -13,16 +14,19 @@ export function CashfreePayments({
   environment,
   configured,
   loading,
+  controls,
 }: {
   payments: PaymentRow[];
   environment: "sandbox" | "production" | null;
   configured: boolean;
   loading: boolean;
+  controls?: ReactNode;
 }) {
   return (
     <section className="tv-payments">
       <div className="tv-section-title">
         <h2>Payments (Cashfree)</h2>
+        <div className="tv-payment-controls">
         <span className="tv-demo-badge">
           {!configured
             ? "Not configured"
@@ -30,6 +34,8 @@ export function CashfreePayments({
               ? "Sandbox · Test payments"
               : "Live payments"}
         </span>
+        {controls}
+        </div>
       </div>
       <div className="tv-payment-scroll">
         <table>
